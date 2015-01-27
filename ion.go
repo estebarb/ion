@@ -27,11 +27,11 @@ A short example:
 
 	func main() {
 		r := ion.NewRouter()
-		r.Get("/", r.Middleware.ThenFunc(hello))
-		r.Get("/:name", r.Middleware.ThenFunc(hello))
+		r.GetFunc("/", hello)
+		r.GetFunc("/:name", hello)
 		http.ListenAndServe(":8080", r)
 	}
-	
+
 At this point the framework is highly experimental, so please don't
 use it in production for now...
 */
@@ -41,8 +41,8 @@ import (
 	"github.com/gorilla/context"
 	httprouter "github.com/julienschmidt/httprouter"
 	"github.com/justinas/alice"
-	"net/http"
 	"html/template"
+	"net/http"
 )
 
 // This is the router used by Ion. It contains the high performance
@@ -95,13 +95,13 @@ func wrapHandler(h http.Handler) httprouter.Handle {
 
 // Registers a new request handler (http.Handler) for the given path and method.
 // It also executes the current Middleware in the settings.
-func (r *Router) MethodHandle(method, path string, handle http.Handler){
+func (r *Router) MethodHandle(method, path string, handle http.Handler) {
 	r.Handle(method, path, wrapHandler(r.Middleware.Then(handle)))
 }
 
 // Registers a new request handler (http.HandlerFunc) for the given path and method.
 // It also executes the current Middleware in the settings.
-func (r *Router) MethodHandleFunc(method, path string, handle http.HandlerFunc){
+func (r *Router) MethodHandleFunc(method, path string, handle http.HandlerFunc) {
 	r.Handle(method, path, wrapHandler(r.Middleware.ThenFunc(handle)))
 }
 
@@ -158,8 +158,8 @@ func (r *Router) PutFunc(path string, handler http.HandlerFunc) {
 // Returns a handler that can render the given templates. The templates
 // receives as parameters the context associated to the current
 // request.
-func RenderTemplate(t *template.Template) http.HandlerFunc{
-	return func(w http.ResponseWriter, r *http.Request){
+func RenderTemplate(t *template.Template) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.GetAll(r)
 		t.Execute(w, ctx)
 	}

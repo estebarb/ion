@@ -29,8 +29,8 @@ A short example:
 
 	func main() {
 		r := ion.NewRouter()
-		r.Get("/", r.Middleware.ThenFunc(hello))
-		r.Get("/:name", r.Middleware.ThenFunc(hello))
+		r.GetFunc("/", hello)
+		r.GetFunc("/:name", hello)
 		http.ListenAndServe(":8080", r)
 	}
 	
