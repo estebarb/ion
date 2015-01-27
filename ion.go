@@ -39,7 +39,7 @@ package ion
 
 import (
 	"github.com/gorilla/context"
-	httprouter "github.com/julienschmidt/httprouter"
+	"github.com/julienschmidt/httprouter"
 	"github.com/justinas/alice"
 	"html/template"
 	"net/http"
@@ -160,7 +160,17 @@ func (r *Router) PutFunc(path string, handler http.HandlerFunc) {
 // request.
 func RenderTemplate(t *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		args := context.Get(r, Urlargs).(httprouter.Params)
+		context.Set(r, Urlargs, paramsToMap(args))
 		ctx := context.GetAll(r)
 		t.Execute(w, ctx)
 	}
+}
+
+func paramsToMap(p httprouter.Params) map[string]string {
+	ret := make(map[string]string)
+	for _, v := range p {
+		ret[v.Key] = v.Value
+	}
+	return ret
 }

@@ -1,0 +1,11 @@
+<html>
+<body>
+{{if .ion_urlargs.name }}
+<h1>Hello {{.ion_urlargs.name}}!</h1>
+{{ end }}
+
+{{if not .ion_urlargs.name }}
+<h1>Hello world!</h1>
+{{ end }}
+</body>
+</html>
