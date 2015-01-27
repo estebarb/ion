@@ -167,10 +167,39 @@ func RenderTemplate(t *template.Template) http.HandlerFunc {
 	}
 }
 
+// Converts the httprouter.Params array to a map, that can
+// be consumed easily from templates.
 func paramsToMap(p httprouter.Params) map[string]string {
 	ret := make(map[string]string)
 	for _, v := range p {
 		ret[v.Key] = v.Value
 	}
 	return ret
+}
+
+// This interface works with RegisterREST to provide a shortcut
+// to register an RESTful endpoint.
+
+type RESTendpoint interface{
+	LIST(w http.ResponseWriter, r *http.Request)
+	POST(w http.ResponseWriter, r *http.Request)
+	PUT(w http.ResponseWriter, r *http.Request)
+	GET(w http.ResponseWriter, r *http.Request)
+	DELETE(w http.ResponseWriter, r *http.Request)
+}
+
+// Register a RESTendpoint in a router.
+// It will register the following routes:
+// - GET  path		(list function)
+// - POST path		(post function)
+// - GET  path/:id	(get function)
+// - PUT  path/:id	(put function)
+// - DELETE  path/:id	(delete function)
+// The path MUST include the trailing slash.
+func (r *Router) RegisterREST(path string, handler RESTendpoint){
+	r.GetFunc(path, handler.GET)
+	r.PostFunc(path, handler.POST)
+	r.GetFunc(path+":id", handler.GET)
+	r.PutFunc(path+":id", handler.PUT)
+	r.DeleteFunc(path+":id", handler.DELETE)
 }
