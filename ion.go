@@ -197,9 +197,9 @@ type RESTendpoint interface{
 // - DELETE  path/:id	(delete function)
 // The path MUST include the trailing slash.
 func (r *Router) RegisterREST(path string, handler RESTendpoint){
-	r.GetFunc(path, handler.GET)
-	r.PostFunc(path, handler.POST)
 	r.GetFunc(path+":id", handler.GET)
 	r.PutFunc(path+":id", handler.PUT)
 	r.DeleteFunc(path+":id", handler.DELETE)
+	r.GetFunc(path, handler.LIST)
+	r.PostFunc(path, handler.POST)
 }
