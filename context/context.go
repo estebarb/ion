@@ -27,6 +27,15 @@ type Context struct{
 	data map[*http.Request]map[interface{}]interface{}
 }
 
+/*
+Creates a new context
+ */
+func New()Context{
+		return Context{
+			data: make(map[*http.Request]map[interface{}]interface{}),
+		}
+}
+
 var globalContext Context
 
 /*
@@ -43,10 +52,11 @@ Returns a http.Handler that automatically clears the data associated
 to the request, after the handler has been processed.
  */
 func (c *Context) ClearHandler(h http.Handler) http.Handler{
-	return func(w http.ResponseWriter, r *http.Request){
+	fn := func(w http.ResponseWriter, r *http.Request){
 		defer c.Clear(r)
 		h.ServeHTTP(w, r)
 	}
+	return http.HandlerFunc(fn)
 }
 
 /*
@@ -75,19 +85,21 @@ func (c *Context) Delete(r *http.Request, key interface{}){
 /*
 Return a value from the context associated to the given request.
  */
-func (c *Context) Get(r *http.Request, key interface{}) (interface{}, error){
+func (c *Context) Get(r *http.Request, key interface{}) (interface{}, bool){
 	c.RLock()
 	defer c.RUnlock()
-	return c.data[r][key]
+	data, ok := c.data[r][key]
+	return data, ok
 }
 
 /*
 Returns all the values from the context associated to the given request.
  */
-func (c *Context) GetAll(r *http.Request) (map[interface{}]interface{}, error){
+func (c *Context) GetAll(r *http.Request) (map[interface{}]interface{}, bool){
 	c.RLock()
 	defer c.RUnlock()
-	return c.data[r]
+	data, ok := c.data[r]
+	return data, ok
 }
 
 /*
@@ -104,10 +116,11 @@ Returns a http.Handler that automatically clears the data associated
 to the request, after the handler has been processed.
  */
 func ClearHandler(h http.Handler) http.Handler{
-	return func(w http.ResponseWriter, r *http.Request){
+	fn := func(w http.ResponseWriter, r *http.Request){
 		defer globalContext.Clear(r)
 		h.ServeHTTP(w, r)
 	}
+	return http.HandlerFunc(fn)
 }
 
 /*
@@ -136,17 +149,19 @@ func Delete(r *http.Request, key interface{}){
 /*
 Return a value from the context associated to the given request.
  */
-func Get(r *http.Request, key interface{}) (interface{}, error){
+func Get(r *http.Request, key interface{}) (interface{}, bool){
 	globalContext.RLock()
 	defer globalContext.RUnlock()
-	return globalContext.data[r][key]
+	data, ok := globalContext.data[r][key]
+	return data, ok
 }
 
 /*
 Returns all the values from the context associated to the given request.
  */
-func GetAll(r *http.Request) (map[interface{}]interface{}, error){
+func GetAll(r *http.Request) (map[interface{}]interface{}, bool){
 	globalContext.RLock()
 	defer globalContext.RUnlock()
-	return globalContext.data[r]
+	data, ok := globalContext.data[r]
+	return data, ok
 }
