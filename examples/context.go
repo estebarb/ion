@@ -10,7 +10,7 @@ import (
 
 var t = template.Must(template.ParseFiles("context.tmpl"))
 
-func handler(w http.ResponseWriter, r *http.Request){
+func handler(w http.ResponseWriter, r *http.Request) {
 	context.Set(r, "message", "Hello world from context value!")
 	ion.RenderTemplate(t).ServeHTTP(w, r)
 }

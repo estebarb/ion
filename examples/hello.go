@@ -3,15 +3,13 @@ package main
 import (
 	"fmt"
 	"github.com/estebarb/ion"
-	"github.com/gorilla/context"
-	"github.com/julienschmidt/httprouter"
 	"net/http"
 )
 
 func hello(w http.ResponseWriter, r *http.Request) {
-	val := context.Get(r, ion.Urlargs).(httprouter.Params)
-	if val != nil {
-		fmt.Fprintf(w, "Hello, %v!", val.ByName("name"))
+	value := ion.URLArgs(r, "name")
+	if value != "" {
+		fmt.Fprintf(w, "Hello, %v!", value)
 	} else {
 		fmt.Fprint(w, "Hello world!")
 	}

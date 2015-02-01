@@ -203,3 +203,10 @@ func (r *Router) RegisterREST(path string, handler RESTendpoint) {
 	r.GetFunc(path, handler.LIST)
 	r.PostFunc(path, handler.POST)
 }
+
+// Returns a named argument from the request URL
+func URLArgs(r *http.Request, name string) string {
+	val, _ := context.Get(r, Urlargs)
+	v2 := val.(httprouter.Params)
+	return v2.ByName(name)
+}
