@@ -14,7 +14,7 @@ can overwrite the data of others.
 
 It is based on https://groups.google.com/forum/#!msg/golang-nuts/teSBtPvv1GQ/U12qA9N51uIJ and
 Gorilla Toolkit Context.
- */
+*/
 package context
 
 import (
@@ -22,26 +22,28 @@ import (
 	"sync"
 )
 
-type Context struct{
+type Context struct {
 	sync.RWMutex
 	data map[*http.Request]map[interface{}]interface{}
 }
 
 /*
 Creates a new context
- */
-func New()Context{
-		return Context{
-			data: make(map[*http.Request]map[interface{}]interface{}),
-		}
+*/
+func New() Context {
+	return Context{
+		data: make(map[*http.Request]map[interface{}]interface{}),
+	}
 }
 
-var globalContext Context
+var globalContext = Context{
+	data: make(map[*http.Request]map[interface{}]interface{}),
+}
 
 /*
 Clears the context data associated to the given request.
- */
-func (c *Context)Clear(r *http.Request){
+*/
+func (c *Context) Clear(r *http.Request) {
 	c.Lock()
 	defer c.Unlock()
 	delete(c.data, r)
@@ -50,9 +52,9 @@ func (c *Context)Clear(r *http.Request){
 /*
 Returns a http.Handler that automatically clears the data associated
 to the request, after the handler has been processed.
- */
-func (c *Context) ClearHandler(h http.Handler) http.Handler{
-	fn := func(w http.ResponseWriter, r *http.Request){
+*/
+func (c *Context) ClearHandler(h http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
 		defer c.Clear(r)
 		h.ServeHTTP(w, r)
 	}
@@ -61,12 +63,12 @@ func (c *Context) ClearHandler(h http.Handler) http.Handler{
 
 /*
 Sets a value associated with a request in this context.
- */
-func (c *Context) Set(r *http.Request, key interface{}, value interface{}){
+*/
+func (c *Context) Set(r *http.Request, key interface{}, value interface{}) {
 	c.Lock()
 	defer c.Unlock()
-	
-	if _, exists := c.data[r]; !exists{
+
+	if _, exists := c.data[r]; !exists {
 		c.data[r] = make(map[interface{}]interface{})
 	}
 	c.data[r][key] = value
@@ -74,18 +76,18 @@ func (c *Context) Set(r *http.Request, key interface{}, value interface{}){
 
 /*
 Deletes a key-value from the context associated to the given request.
- */
-func (c *Context) Delete(r *http.Request, key interface{}){
+*/
+func (c *Context) Delete(r *http.Request, key interface{}) {
 	c.Lock()
 	defer c.Unlock()
-	
+
 	delete(c.data[r], key)
 }
 
 /*
 Return a value from the context associated to the given request.
- */
-func (c *Context) Get(r *http.Request, key interface{}) (interface{}, bool){
+*/
+func (c *Context) Get(r *http.Request, key interface{}) (interface{}, bool) {
 	c.RLock()
 	defer c.RUnlock()
 	data, ok := c.data[r][key]
@@ -94,8 +96,8 @@ func (c *Context) Get(r *http.Request, key interface{}) (interface{}, bool){
 
 /*
 Returns all the values from the context associated to the given request.
- */
-func (c *Context) GetAll(r *http.Request) (map[interface{}]interface{}, bool){
+*/
+func (c *Context) GetAll(r *http.Request) (map[interface{}]interface{}, bool) {
 	c.RLock()
 	defer c.RUnlock()
 	data, ok := c.data[r]
@@ -104,19 +106,17 @@ func (c *Context) GetAll(r *http.Request) (map[interface{}]interface{}, bool){
 
 /*
 Clears the context data associated to the given request.
- */
-func Clear(r *http.Request){
-	globalContext.Lock()
-	defer globalContext.Unlock()
-	delete(globalContext.data, r)
+*/
+func Clear(r *http.Request) {
+	globalContext.Clear(r)
 }
 
 /*
 Returns a http.Handler that automatically clears the data associated
 to the request, after the handler has been processed.
- */
-func ClearHandler(h http.Handler) http.Handler{
-	fn := func(w http.ResponseWriter, r *http.Request){
+*/
+func ClearHandler(h http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
 		defer globalContext.Clear(r)
 		h.ServeHTTP(w, r)
 	}
@@ -125,43 +125,30 @@ func ClearHandler(h http.Handler) http.Handler{
 
 /*
 Sets a value associated with a request in this context.
- */
-func Set(r *http.Request, key interface{}, value interface{}){
-	globalContext.Lock()
-	defer globalContext.Unlock()
-
-	if _, exists := globalContext.data[r]; !exists{
-		globalContext.data[r] = make(map[interface{}]interface{})
-	}
-	globalContext.data[r][key] = value
+*/
+func Set(r *http.Request, key interface{}, value interface{}) {
+	globalContext.Set(r, key, value)
 }
 
 /*
 Deletes a key-value from the context associated to the given request.
- */
-func Delete(r *http.Request, key interface{}){
-	globalContext.Lock()
-	defer globalContext.Unlock()
-
-	delete(globalContext.data[r], key)
+*/
+func Delete(r *http.Request, key interface{}) {
+	globalContext.Delete(r, key)
 }
 
 /*
 Return a value from the context associated to the given request.
- */
-func Get(r *http.Request, key interface{}) (interface{}, bool){
-	globalContext.RLock()
-	defer globalContext.RUnlock()
-	data, ok := globalContext.data[r][key]
+*/
+func Get(r *http.Request, key interface{}) (interface{}, bool) {
+	data, ok := globalContext.Get(r, key)
 	return data, ok
 }
 
 /*
 Returns all the values from the context associated to the given request.
- */
-func GetAll(r *http.Request) (map[interface{}]interface{}, bool){
-	globalContext.RLock()
-	defer globalContext.RUnlock()
-	data, ok := globalContext.data[r]
+*/
+func GetAll(r *http.Request) (map[interface{}]interface{}, bool) {
+	data, ok := globalContext.GetAll(r)
 	return data, ok
 }

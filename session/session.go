@@ -41,27 +41,26 @@ middleware for Ion.
 package session
 
 import (
-	"net/http"
 	"github.com/estebarb/ion/context"
 	gs "github.com/gorilla/sessions"
-	"net/http/httptest"
 	"github.com/justinas/alice"
+	"net/http"
+	"net/http/httptest"
 )
 
 var sessionData = context.New()
 
-
 // Sessions is a Middleware that maps a session.Session service into the Ion middleware chain.
 // Sessions can use a number of storage solutions with the given store.
 func Sessions(name string, store gs.Store) alice.Constructor {
-	return func(next http.Handler) http.Handler{
+	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			s, _ := store.Get(r, name)
 			defer sessionData.Clear(r)
 			sessionData.Set(r, name, s)
 			wrec := httptest.NewRecorder()
-			
-			defer func(){
+
+			defer func() {
 				// we copy the original headers first
 				for k, v := range wrec.Header() {
 					w.Header()[k] = v
@@ -70,14 +69,14 @@ func Sessions(name string, store gs.Store) alice.Constructor {
 				w.WriteHeader(wrec.Code)
 				w.Write(wrec.Body.Bytes())
 			}()
-			
+
 			next.ServeHTTP(wrec, r)
 		}
 		return http.HandlerFunc(fn)
 	}
 }
 
-func GetSession(r *http.Request, name string) *gs.Session{
+func GetSession(r *http.Request, name string) *gs.Session {
 	s, _ := sessionData.Get(r, name)
 	return s.(*gs.Session)
 }

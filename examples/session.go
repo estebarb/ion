@@ -1,12 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"github.com/estebarb/ion"
 	"github.com/estebarb/ion/session"
-	"net/http"
 	"github.com/gorilla/sessions"
-	"fmt"
 	"math/rand"
+	"net/http"
 )
 
 var store = sessions.NewCookieStore([]byte(""))

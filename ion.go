@@ -38,7 +38,7 @@ use it in production for now...
 package ion
 
 import (
-	"github.com/gorilla/context"
+	"github.com/estebarb/ion/context"
 	"github.com/julienschmidt/httprouter"
 	"github.com/justinas/alice"
 	"html/template"
@@ -160,9 +160,9 @@ func (r *Router) PutFunc(path string, handler http.HandlerFunc) {
 // request.
 func RenderTemplate(t *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		args := context.Get(r, Urlargs).(httprouter.Params)
-		context.Set(r, Urlargs, paramsToMap(args))
-		ctx := context.GetAll(r)
+		args, _ := context.Get(r, Urlargs)
+		context.Set(r, Urlargs, paramsToMap(args.(httprouter.Params)))
+		ctx, _ := context.GetAll(r)
 		t.Execute(w, ctx)
 	}
 }
@@ -180,7 +180,7 @@ func paramsToMap(p httprouter.Params) map[string]string {
 // This interface works with RegisterREST to provide a shortcut
 // to register an RESTful endpoint.
 
-type RESTendpoint interface{
+type RESTendpoint interface {
 	LIST(w http.ResponseWriter, r *http.Request)
 	POST(w http.ResponseWriter, r *http.Request)
 	PUT(w http.ResponseWriter, r *http.Request)
@@ -196,7 +196,7 @@ type RESTendpoint interface{
 // - PUT  path/:id	(put function)
 // - DELETE  path/:id	(delete function)
 // The path MUST include the trailing slash.
-func (r *Router) RegisterREST(path string, handler RESTendpoint){
+func (r *Router) RegisterREST(path string, handler RESTendpoint) {
 	r.GetFunc(path+":id", handler.GET)
 	r.PutFunc(path+":id", handler.PUT)
 	r.DeleteFunc(path+":id", handler.DELETE)
