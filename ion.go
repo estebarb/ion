@@ -159,8 +159,10 @@ func (r *Router) PutFunc(path string, handler http.HandlerFunc) {
 // request.
 func RenderTemplate(t *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Adds URL params to context
 		args, _ := context.Get(r, Urlargs)
 		context.Set(r, Urlargs, paramsToMap(args.(httprouter.Params)))
+		// Adds data in context to template context
 		ctx, _ := context.GetAll(r)
 		t.Execute(w, ctx)
 	}

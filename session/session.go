@@ -70,6 +70,15 @@ func Sessions(name string, store gs.Store) alice.Constructor {
 				w.Write(wrec.Body.Bytes())
 			}()
 
+			// Copy the values in the session to
+			// the context:
+			gs := GetSession(r, name)
+			context.Set(r, "session", gs.Values)
+			if len(gs.Flashes())>0 {
+				context.Set(r, "flash", gs.Flashes())
+			}
+			
+			// Serve the request
 			next.ServeHTTP(wrec, r)
 		}
 		return http.HandlerFunc(fn)
