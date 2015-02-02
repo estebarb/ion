@@ -42,7 +42,8 @@ import (
 	"github.com/justinas/alice"
 	"html/template"
 	"net/http"
-)
+	"encoding/json"
+	"io/ioutil")
 
 // This is the router used by Ion. It contains the high performance
 // trie based httprouter, the middleware manager alice and adapter
@@ -210,4 +211,23 @@ func URLArgs(r *http.Request, name string) string {
 	val, _ := context.Get(r, Urlargs)
 	v2 := val.(httprouter.Params)
 	return v2.ByName(name)
+}
+
+// Writes a JSON value
+func MarshalJSON(w http.ResponseWriter, value interface{}) error{
+	out, err := json.Marshal(value)
+	if err != nil{
+		return err		
+	}
+	w.Write(out)
+	return nil
+}
+
+// Returns the unmarshaled value from the request body
+func UnmarshalJSON(r *http.Request, value interface{}) error{
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil{
+		return err
+	}
+	return json.Unmarshal(body, value)
 }
