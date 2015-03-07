@@ -62,7 +62,7 @@ context, so they can be retrieved using:
 	params := context.Get(r, ion.Urlargs)
 	name := params.ByName("name")
 */
-const Urlargs = "ion_urlargs"
+const Urlargs = "Urlargs"
 
 /*
 Returns a new router, with no middleware.
