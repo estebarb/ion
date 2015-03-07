@@ -1,0 +1,18 @@
+{{ define "hello" }}
+<html>
+<head>
+    <title>IonVC test</title>
+</head>
+<body>
+{{if .Urlargs.name }}
+<h1>Hello {{title .Urlargs.name}}!</h1>
+{{ end }}
+
+{{if not .Urlargs.name }}
+<h1>Hello world!</h1>
+{{ end }}
+
+This is a context value: {{.key}}
+</body>
+</html>
+{{ end }}
