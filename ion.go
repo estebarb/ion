@@ -43,7 +43,10 @@ import (
 	"html/template"
 	"net/http"
 	"encoding/json"
-	"io/ioutil")
+	"io/ioutil"
+	"time"
+	"log"
+)
 
 // This is the router used by Ion. It contains the high performance
 // trie based httprouter, the middleware manager alice and adapter
@@ -235,4 +238,32 @@ func UnmarshalJSON(r *http.Request, value interface{}) error{
 		return err
 	}
 	return json.Unmarshal(body, value)
+}
+
+// Provides a logging middleware
+func LoggingMiddleware(next http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		t1 := time.Now()
+		next.ServeHTTP(w, r)
+		t2 := time.Now()
+		log.Printf("[%s] %q %v\n", r.Method, r.URL.String(), t2.Sub(t1))
+	}
+
+	return http.HandlerFunc(fn)
+}
+
+// Provides a recovery from panics in other handlers
+func PanicMiddleware(next http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Printf("panic: %+v", err)
+				http.Error(w, http.StatusText(500), 500)
+			}
+		}()
+
+		next.ServeHTTP(w, r)
+	}
+
+	return http.HandlerFunc(fn)
 }
