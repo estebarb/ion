@@ -61,8 +61,13 @@ context, so they can be retrieved using:
 	// r is a *http.Request
 	params := context.Get(r, ion.Urlargs)
 	name := params.ByName("name")
+
+But the preferred way is the following:
+
+	name := ion.URLArgs(r, "name")
+
 */
-const Urlargs = "Urlargs"
+const urlargs = "urlargs"
 
 /*
 Returns a new router, with no middleware.
@@ -88,7 +93,7 @@ wrapHandler transforms a http.Handler handler to a httprouter.Handle
 */
 func wrapHandler(h http.Handler) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		context.Set(r, Urlargs, ps)
+		context.Set(r, urlargs, ps)
 		h.ServeHTTP(w, r)
 	}
 }
@@ -161,8 +166,8 @@ func (r *Router) PutFunc(path string, handler http.HandlerFunc) {
 func RenderTemplate(t *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Adds URL params to context
-		args, _ := context.Get(r, Urlargs)
-		context.Set(r, Urlargs, paramsToMap(args.(httprouter.Params)))
+		args, _ := context.Get(r, urlargs)
+		context.Set(r, urlargs, paramsToMap(args.(httprouter.Params)))
 		// Adds data in context to template context
 		ctx, _ := context.GetAll(r)
 		t.Execute(w, ctx)
@@ -208,7 +213,7 @@ func (r *Router) RegisterREST(path string, handler RESTendpoint) {
 
 // Returns a named argument from the request URL
 func URLArgs(r *http.Request, name string) string {
-	val, _ := context.Get(r, Urlargs)
+	val, _ := context.Get(r, urlargs)
 	v2 := val.(httprouter.Params)
 	return v2.ByName(name)
 }
