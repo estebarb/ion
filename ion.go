@@ -267,3 +267,11 @@ func PanicMiddleware(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(fn)
 }
+
+// This is the simpler possible handler: DoNothing do nothing.
+// It can be used as a placeholder, or when we want to run
+// the middleware for the collateral effects, but we don't want
+// to do something specific.
+// Also can be used with IonMVC.
+func DoNothing(w http.ResponseWriter, r *http.Request) {
+}
