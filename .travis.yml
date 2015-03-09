@@ -8,4 +8,13 @@ go:
 install:
   - make get-deps
 
-script: go test -v ./...
+script:
+  - go test -v .
+  - go test -v ./context
+  - go test -v ./examples/context.go
+  - go test -v ./examples/hello.go
+  - go test -v ./examples/restful.go
+  - go test -v ./examples/session.go
+  - go test -v ./examples/template.go
+  - go test -v ./ionvc
+  - go test -v ./session
