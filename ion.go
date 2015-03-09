@@ -280,7 +280,10 @@ func DoNothing(w http.ResponseWriter, r *http.Request) {
 // so that you don't have to do it in the handlers/controllers.
 func FormParserMiddleware(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		r.ParseForm()
+		err := r.ParseForm()
+		if err != nil{
+			panic(err)
+		}
 		next.ServeHTTP(w, r)
 	}
 	return http.HandlerFunc(fn)
