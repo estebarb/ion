@@ -275,3 +275,13 @@ func PanicMiddleware(next http.Handler) http.Handler {
 // Also can be used with IonMVC.
 func DoNothing(w http.ResponseWriter, r *http.Request) {
 }
+
+// FormParser parses the forms in all the requests,
+// so that you don't have to do it in the handlers/controllers.
+func FormParserMiddleware(next http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		next.ServeHTTP(w, r)
+	}
+	return http.HandlerFunc(fn)
+}
