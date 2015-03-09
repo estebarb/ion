@@ -1,5 +1,7 @@
-Ion Web Framework [![GoDoc](https://godoc.org/github.com/estebarb/ion?status.svg)](http://godoc.org/github.com/estebarb/ion)
-=================
+# Ion Web Framework
+[![GoDoc](https://godoc.org/github.com/estebarb/ion?status.svg)](http://godoc.org/github.com/estebarb/ion)
+[![Build Status](https://travis-ci.org/estebarb/ion.svg?branch=master)](https://travis-ci.org/estebarb/ion)
+
 
 Ion is a small web framework for people in a hurry.
 Ion provides a fast trie based router (julienschmidt/httprouter),
