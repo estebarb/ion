@@ -1,3 +1,4 @@
+// +build appengine
 // This package provides a thin layer
 // over GAE datastore and memcache.
 //
