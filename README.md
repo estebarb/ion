@@ -4,9 +4,9 @@
 
 
 Ion is a small web framework for people in a hurry.
-Ion provides a fast trie based router (julienschmidt/httprouter),
+Ion provides a flexible router (gorilla/mux),
 a integrated middleware support (justinas/alice), automatic
-context support (via gorilla/context) and some handful helpers.
+context support and some handful helpers.
 
 A short example:
 
