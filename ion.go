@@ -1,8 +1,8 @@
 /*
 Ion is a small web framework for people in a hurry.
-Ion provides a fast trie based router (julienschmidt/httprouter),
+Ion provides a flexible router (gorilla/mux),
 a integrated middleware support (justinas/alice), automatic
-context support (via gorilla/context) and some handful helpers.
+context support and some handful helpers.
 
 A short example:
 
@@ -31,14 +31,14 @@ A short example:
 	}
 
 
-At this point the framework is highly experimental, so please don't
-use it in production for now...
+At this point the framework is highly experimental, so please take that
+in consideration if you want to use it.
 */
 package ion
 
 import (
 	"github.com/estebarb/ion/context"
-	"github.com/julienschmidt/httprouter"
+	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 	"html/template"
 	"net/http"
@@ -48,27 +48,20 @@ import (
 	"log"
 )
 
-// This is the router used by Ion. It contains the high performance
-// trie based httprouter, the middleware manager alice and adapter
-// functions that make trivial to use the Go http.Handler
+// This is the router used by Ion. It contains gorilla mux router,
+// the middleware manager alice and adapter
+// functions that make easy to use the Go http.Handler
 type Router struct {
-	*httprouter.Router
+	*mux.Router
 	Middleware alice.Chain
 }
 
 /*
-Ion adds the path arguments by httprouter to
-context, so they can be retrieved using:
-
-	// asuming a path like /:name
-	// r is a *http.Request
-	params := context.Get(r, ion.Urlargs)
-	name := params.ByName("name")
-
-But the preferred way is the following:
+Ion adds the arguments to the request context, using
+this key. The application can retrieve the arguments
+using:
 
 	name := ion.URLArgs(r, "name")
-
 */
 const urlargs = "urlargs"
 
@@ -76,8 +69,9 @@ const urlargs = "urlargs"
 Returns a new router, with no middleware.
 */
 func NewRouter() *Router {
-	return &Router{httprouter.New(), alice.New()}
+	return &Router{mux.NewRouter(), alice.New(ContextMiddleware)}
 }
+
 
 /*
 Returns a new router, configured with the middlewares
@@ -85,32 +79,25 @@ provided.
 */
 func NewRouterDefaults(middleware ...alice.Constructor) *Router {
 	r := &Router{
-		httprouter.New(),
-		alice.New(middleware...),
+		mux.NewRouter(),
+		alice.New(),
 	}
+	r.Middleware.Append(ContextMiddleware)
+	r.Middleware.Append(middleware...)
 	return r
 }
 
-/*
-wrapHandler transforms a http.Handler handler to a httprouter.Handle
-*/
-func wrapHandler(h http.Handler) httprouter.Handle {
-	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		context.Set(r, urlargs, ps)
-		h.ServeHTTP(w, r)
-	}
-}
 
 // Registers a new request handler (http.Handler) for the given path and method.
 // It also executes the current Middleware in the settings.
 func (r *Router) MethodHandle(method, path string, handle http.Handler) {
-	r.Handle(method, path, wrapHandler(r.Middleware.Then(handle)))
+	r.Methods(method).Path(path).Handler(r.Middleware.Then(handle))
 }
 
 // Registers a new request handler (http.HandlerFunc) for the given path and method.
 // It also executes the current Middleware in the settings.
 func (r *Router) MethodHandleFunc(method, path string, handle http.HandlerFunc) {
-	r.Handle(method, path, wrapHandler(r.Middleware.ThenFunc(handle)))
+	r.Methods(method).Path(path).Handler(r.Middleware.ThenFunc(handle))
 }
 
 // Shortcut for router.MethodHandle("DELETE", path, handler)
@@ -168,23 +155,10 @@ func (r *Router) PutFunc(path string, handler http.HandlerFunc) {
 // request.
 func RenderTemplate(t *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Adds URL params to context
-		args, _ := context.Get(r, urlargs)
-		context.Set(r, urlargs, paramsToMap(args.(httprouter.Params)))
 		// Adds data in context to template context
 		ctx, _ := context.GetAll(r)
 		t.Execute(w, ctx)
 	}
-}
-
-// Converts the httprouter.Params array to a map, that can
-// be consumed easily from templates.
-func paramsToMap(p httprouter.Params) map[string]string {
-	ret := make(map[string]string)
-	for _, v := range p {
-		ret[v.Key] = v.Value
-	}
-	return ret
 }
 
 // This interface works with RegisterREST to provide a shortcut
@@ -216,9 +190,8 @@ func (r *Router) RegisterREST(path string, handler RESTendpoint) {
 
 // Returns a named argument from the request URL
 func URLArgs(r *http.Request, name string) string {
-	val, _ := context.Get(r, urlargs)
-	v2 := val.(httprouter.Params)
-	return v2.ByName(name)
+	vars := mux.Vars(r)
+	return vars[name]
 }
 
 // Writes a JSON value
@@ -238,6 +211,16 @@ func UnmarshalJSON(r *http.Request, value interface{}) error{
 		return err
 	}
 	return json.Unmarshal(body, value)
+}
+
+// Inserts the path variables in the context
+func ContextMiddleware(next http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		context.Set(r, urlargs, mux.Vars(r))
+		defer context.Clear(r)
+		next.ServeHTTP(w, r)
+	}
+	return http.HandlerFunc(fn)
 }
 
 // Provides a logging middleware
