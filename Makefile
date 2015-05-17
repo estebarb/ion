@@ -1,4 +1,5 @@
 get-deps:
+	go get github.com/gorilla/mux
 	go get github.com/justinas/alice
 	go get github.com/gorilla/sessions
 fmt:
