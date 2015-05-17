@@ -16,7 +16,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	r := ion.NewRouter()
+	r := ion.NewRouterDefaults(ion.LoggingMiddleware)
 	r.GetFunc("/", handler)
 	log.Fatal(http.ListenAndServe(":8080", r))
 }

@@ -78,76 +78,75 @@ Returns a new router, configured with the middlewares
 provided.
 */
 func NewRouterDefaults(middleware ...alice.Constructor) *Router {
+	middleware = append([]alice.Constructor{ContextMiddleware}, middleware...)
 	r := &Router{
 		mux.NewRouter(),
-		alice.New(),
+		alice.New(middleware...),
 	}
-	r.Middleware.Append(ContextMiddleware)
-	r.Middleware.Append(middleware...)
 	return r
 }
 
 
 // Registers a new request handler (http.Handler) for the given path and method.
 // It also executes the current Middleware in the settings.
-func (r *Router) MethodHandle(method, path string, handle http.Handler) {
-	r.Methods(method).Path(path).Handler(r.Middleware.Then(handle))
+func (r *Router) MethodHandle(method, path string, handle http.Handler) *mux.Route {
+	return r.Methods(method).Path(path).Handler(r.Middleware.Then(handle))
 }
 
 // Registers a new request handler (http.HandlerFunc) for the given path and method.
 // It also executes the current Middleware in the settings.
-func (r *Router) MethodHandleFunc(method, path string, handle http.HandlerFunc) {
-	r.Methods(method).Path(path).Handler(r.Middleware.ThenFunc(handle))
+func (r *Router) MethodHandleFunc(method, path string, handle http.HandlerFunc) *mux.Route {
+	return r.Methods(method).Path(path).Handler(r.Middleware.ThenFunc(handle))
 }
 
 // Shortcut for router.MethodHandle("DELETE", path, handler)
-func (r *Router) DELETE(path string, handler http.Handler) {
-	r.MethodHandle("DELETE", path, handler)
+func (r *Router) DELETE(path string, handler http.Handler) *mux.Route {
+	return r.MethodHandle("DELETE", path, handler)
 }
 
 // Shortcut for router.MethodHandle("GET", path, handler)
-func (r *Router) GET(path string, handler http.Handler) {
-	r.MethodHandle("GET", path, handler)
+func (r *Router) GET(path string, handler http.Handler) *mux.Route {
+	return r.MethodHandle("GET", path, handler)
 }
 
 // Shortcut for router.MethodHandle("POST", path, handler)
-func (r *Router) POST(path string, handler http.Handler) {
-	r.MethodHandle("POST", path, handler)
+func (r *Router) POST(path string, handler http.Handler) *mux.Route {
+	return r.MethodHandle("POST", path, handler)
 }
 
 // Shortcut for router.MethodHandle("PATCH", path, handler)
-func (r *Router) PATCH(path string, handler http.Handler) {
-	r.MethodHandle("PATCH", path, handler)
+func (r *Router) PATCH(path string, handler http.Handler) *mux.Route {
+	return r.MethodHandle("PATCH", path, handler)
 }
 
 // Shortcut for router.MethodHandle("PUT", path, handler)
-func (r *Router) PUT(path string, handler http.Handler) {
-	r.MethodHandle("PUT", path, handler)
+func (r *Router) PUT(path string, handler http.Handler) *mux.Route {
+	return r.MethodHandle("PUT", path, handler)
 }
 
 // Shortcut for router.MethodHandleFunc("DELETE", path, handler)
-func (r *Router) DeleteFunc(path string, handler http.HandlerFunc) {
-	r.MethodHandleFunc("DELETE", path, handler)
+func (r *Router) DeleteFunc(path string, handler http.HandlerFunc) *mux.Route {
+	return r.MethodHandleFunc("DELETE", path, handler)
 }
 
 // Shortcut for router.MethodHandleFunc("GET", path, handler)
-func (r *Router) GetFunc(path string, handler http.HandlerFunc) {
-	r.MethodHandleFunc("GET", path, handler)
+func (r *Router) GetFunc(path string, handler http.HandlerFunc) *mux.Route {
+	return r.MethodHandleFunc("GET", path, handler)
 }
 
 // Shortcut for router.MethodHandleFunc("POST", path, handler)
-func (r *Router) PostFunc(path string, handler http.HandlerFunc) {
-	r.MethodHandleFunc("POST", path, handler)
+func (r *Router) PostFunc(path string, handler http.HandlerFunc) *mux.Route {
+	return r.MethodHandleFunc("POST", path, handler)
 }
 
 // Shortcut for router.MethodHandleFunc("PATCH", path, handler)
-func (r *Router) PatchFunc(path string, handler http.HandlerFunc) {
-	r.MethodHandleFunc("PATCH", path, handler)
+func (r *Router) PatchFunc(path string, handler http.HandlerFunc) *mux.Route {
+	return r.MethodHandleFunc("PATCH", path, handler)
 }
 
 // Shortcut for router.MethodHandleFunc("PUT", path, handler)
-func (r *Router) PutFunc(path string, handler http.HandlerFunc) {
-	r.MethodHandleFunc("PUT", path, handler)
+func (r *Router) PutFunc(path string, handler http.HandlerFunc) *mux.Route {
+	return r.MethodHandleFunc("PUT", path, handler)
 }
 
 // Returns a handler that can render the given templates. The templates
