@@ -26,7 +26,7 @@ A short example:
 	func main() {
 		r := ion.NewRouter()
 		r.GetFunc("/", hello)
-		r.GetFunc("/:name", hello)
+		r.GetFunc("/{name}", hello)
 		http.ListenAndServe(":8080", r)
 	}
 
@@ -175,14 +175,14 @@ type RESTendpoint interface {
 // It will register the following routes:
 // - GET  path		(list function)
 // - POST path		(post function)
-// - GET  path/:id	(get function)
-// - PUT  path/:id	(put function)
-// - DELETE  path/:id	(delete function)
+// - GET  path/{id}	(get function)
+// - PUT  path/{id}	(put function)
+// - DELETE  path/{id}	(delete function)
 // The path MUST include the trailing slash.
 func (r *Router) RegisterREST(path string, handler RESTendpoint) {
-	r.GetFunc(path+":id", handler.GET)
-	r.PutFunc(path+":id", handler.PUT)
-	r.DeleteFunc(path+":id", handler.DELETE)
+	r.GetFunc(path+"{id}", handler.GET)
+	r.PutFunc(path+"{id}", handler.PUT)
+	r.DeleteFunc(path+"{id}", handler.DELETE)
 	r.GetFunc(path, handler.LIST)
 	r.PostFunc(path, handler.POST)
 }

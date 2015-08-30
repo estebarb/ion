@@ -30,7 +30,7 @@ A short example:
 	func main() {
 		r := ion.NewRouter()
 		r.GetFunc("/", hello)
-		r.GetFunc("/:name", hello)
+		r.GetFunc("/{name}", hello)
 		http.ListenAndServe(":8080", r)
 	}
 	

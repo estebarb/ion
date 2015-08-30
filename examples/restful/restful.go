@@ -38,9 +38,9 @@ func main() {
 		fmt.Fprint(w, `Please try the following endpoints:
 	- GET       /test/      Lists the items
 	- POST      /test/      Post a new item
-	- GET       /test/:id   Gets a item
-	- DELETE    /test/:id   Deletes a item
-	- PUT       /test/:id   Updates a item`)
+	- GET       /test/{id}   Gets a item
+	- DELETE    /test/{id}   Deletes a item
+	- PUT       /test/{id}   Updates a item`)
 	})
 	r.RegisterREST("/test/", rest)
 	http.ListenAndServe(":8080", r)

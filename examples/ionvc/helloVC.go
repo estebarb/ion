@@ -26,7 +26,7 @@ func main() {
 	// wrapper. The first parameter is the handler, and
 	// the second is the name of the template.
 	r.GetFunc("/", ionvc.ControllerFunc(hello, "hello"))
-	r.GetFunc("/:name", ionvc.ControllerFunc(hello, "hello"))
+	r.GetFunc("/{name}", ionvc.ControllerFunc(hello, "hello"))
 	
 	// Starts the server.
 	http.ListenAndServe(":8080", r)

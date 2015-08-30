@@ -18,6 +18,6 @@ func hello(w http.ResponseWriter, r *http.Request) {
 func main() {
 	r := ion.NewRouter()
 	r.GetFunc("/", hello)
-	r.GetFunc("/:name", hello)
+	r.GetFunc("/{name}", hello)
 	http.ListenAndServe(":8080", r)
 }
