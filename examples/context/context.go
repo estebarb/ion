@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/estebarb/ion"
 	"github.com/estebarb/ion/context"
+	mw "github.com/estebarb/ion/middleware"
 	"html/template"
 	"log"
 	"net/http"
@@ -16,7 +17,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	r := ion.NewRouterDefaults(ion.LoggingMiddleware)
+	r := ion.NewRouterDefaults(mw.LoggingMiddleware)
 	r.GetFunc("/", handler)
 	log.Fatal(http.ListenAndServe(":8080", r))
 }

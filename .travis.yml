@@ -3,18 +3,11 @@ language: go
 go:
   - 1.3
   - 1.4
+  - 1.5
   - tip
 
 install:
   - make get-deps
 
 script:
-  - go test -v .
-  - go test -v ./context
-  - go test -v ./ionvc
-  - go test -v ./session
-  - go test -v ./examples/context/context.go
-  - go test -v ./examples/hello/hello.go
-  - go test -v ./examples/restful/restful.go
-  - go test -v ./examples/session/session.go
-  - go test -v ./examples/template/template.go
+  - make test

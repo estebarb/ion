@@ -37,15 +37,14 @@ in consideration if you want to use it.
 package ion
 
 import (
+	"encoding/json"
 	"github.com/estebarb/ion/context"
+	mw "github.com/estebarb/ion/middleware"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 	"html/template"
-	"net/http"
-	"encoding/json"
 	"io/ioutil"
-	"time"
-	"log"
+	"net/http"
 )
 
 // This is the router used by Ion. It contains gorilla mux router,
@@ -57,35 +56,25 @@ type Router struct {
 }
 
 /*
-Ion adds the arguments to the request context, using
-this key. The application can retrieve the arguments
-using:
-
-	name := ion.URLArgs(r, "name")
-*/
-const urlargs = "urlargs"
-
-/*
 Returns a new router, with no middleware.
 */
 func NewRouter() *Router {
-	return &Router{mux.NewRouter(), alice.New(ContextMiddleware)}
+	return &Router{mux.NewRouter(), alice.New(mw.ContextMiddleware)}
 }
-
 
 /*
 Returns a new router, configured with the middlewares
 provided.
 */
 func NewRouterDefaults(middleware ...alice.Constructor) *Router {
-	middleware = append([]alice.Constructor{ContextMiddleware}, middleware...)
+	middleware = append([]alice.Constructor{mw.ContextMiddleware},
+		middleware...)
 	r := &Router{
 		mux.NewRouter(),
 		alice.New(middleware...),
 	}
 	return r
 }
-
 
 // Registers a new request handler (http.Handler) for the given path and method.
 // It also executes the current Middleware in the settings.
@@ -193,63 +182,6 @@ func URLArgs(r *http.Request, name string) string {
 	return vars[name]
 }
 
-// Writes a JSON value
-func MarshalJSON(w http.ResponseWriter, value interface{}) error{
-	out, err := json.Marshal(value)
-	if err != nil{
-		return err		
-	}
-	w.Write(out)
-	return nil
-}
-
-// Returns the unmarshaled value from the request body
-func UnmarshalJSON(r *http.Request, value interface{}) error{
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil{
-		return err
-	}
-	return json.Unmarshal(body, value)
-}
-
-// Inserts the path variables in the context
-func ContextMiddleware(next http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
-		context.Set(r, urlargs, mux.Vars(r))
-		defer context.Clear(r)
-		next.ServeHTTP(w, r)
-	}
-	return http.HandlerFunc(fn)
-}
-
-// Provides a logging middleware
-func LoggingMiddleware(next http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
-		t1 := time.Now()
-		next.ServeHTTP(w, r)
-		t2 := time.Now()
-		log.Printf("[%s] %q %v\n", r.Method, r.URL.String(), t2.Sub(t1))
-	}
-
-	return http.HandlerFunc(fn)
-}
-
-// Provides a recovery from panics in other handlers
-func PanicMiddleware(next http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if err := recover(); err != nil {
-				log.Printf("panic: %+v", err)
-				http.Error(w, http.StatusText(500), 500)
-			}
-		}()
-
-		next.ServeHTTP(w, r)
-	}
-
-	return http.HandlerFunc(fn)
-}
-
 // This is the simpler possible handler: DoNothing do nothing.
 // It can be used as a placeholder, or when we want to run
 // the middleware for the collateral effects, but we don't want
@@ -258,15 +190,21 @@ func PanicMiddleware(next http.Handler) http.Handler {
 func DoNothing(w http.ResponseWriter, r *http.Request) {
 }
 
-// FormParser parses the forms in all the requests,
-// so that you don't have to do it in the handlers/controllers.
-func FormParserMiddleware(next http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
-		err := r.ParseForm()
-		if err != nil{
-			panic(err)
-		}
-		next.ServeHTTP(w, r)
+// Writes a JSON value
+func MarshalJSON(w http.ResponseWriter, value interface{}) error {
+	out, err := json.Marshal(value)
+	if err != nil {
+		return err
 	}
-	return http.HandlerFunc(fn)
+	w.Write(out)
+	return nil
+}
+
+// Returns the unmarshaled value from the request body
+func UnmarshalJSON(r *http.Request, value interface{}) error {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(body, value)
 }

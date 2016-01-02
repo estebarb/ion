@@ -74,10 +74,10 @@ func Sessions(name string, store gs.Store) alice.Constructor {
 			// the context:
 			gs := GetSession(r, name)
 			context.Set(r, "session", gs.Values)
-			if len(gs.Flashes())>0 {
+			if len(gs.Flashes()) > 0 {
 				context.Set(r, "flash", gs.Flashes())
 			}
-			
+
 			// Serve the request
 			next.ServeHTTP(wrec, r)
 		}

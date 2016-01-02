@@ -34,7 +34,7 @@ func (c restHandler) DELETE(w http.ResponseWriter, r *http.Request) {
 func main() {
 	r := ion.NewRouter()
 	var rest restHandler
-	r.GetFunc("/", func(w http.ResponseWriter, r *http.Request){
+	r.GetFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, `Please try the following endpoints:
 	- GET       /test/      Lists the items
 	- POST      /test/      Post a new item
