@@ -11,6 +11,7 @@ fmt:
 	go fmt ./examples/session
 	go fmt ./examples/template
 	go fmt ./session
+	go fmt ./avion
 	go fmt ./middleware
 	go fmt .
 test:
@@ -18,6 +19,7 @@ test:
 	go test -v ./context
 	go test -v ./ionvc
 	go test -v ./session
+	go test -v ./avion
 	go test -v ./examples/context/context.go
 	go test -v ./examples/hello/hello.go
 	go test -v ./examples/restful/restful.go

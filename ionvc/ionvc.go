@@ -46,3 +46,7 @@ func ControllerFunc(handler http.HandlerFunc, templateName string) http.HandlerF
 		ion.RenderTemplate(tmpl).ServeHTTP(w, r)
 	}
 }
+
+func TemplateLookup(templateName string) *template.Template {
+    return _templates.Lookup(templateName)
+}
