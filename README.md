@@ -37,3 +37,7 @@ A short example:
 At this point the framework is highly experimental, so please don't
 use it in production for now... I'm planning to add more features,
 but maybe I will break things. Don't say I don't tell you! :p
+
+## License
+
+Ion is released under the MIT License, as specified in LICENSE.
