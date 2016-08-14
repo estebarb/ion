@@ -1,4 +1,6 @@
 // +build appengine
+
+// Middleware specific for GAE
 package iongae
 
 import (
