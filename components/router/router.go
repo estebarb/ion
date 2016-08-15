@@ -112,7 +112,9 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		values, eq := equalPath(path, route.parsedPath)
 		if eq {
 			state := r.states.GetState(req)
-			state.Set("path", values)
+			for key, value := range values {
+				state.Set(key, value)
+			}
 			r.GetStateContainer().Middleware(route.handler).ServeHTTP(w, req)
 			return
 		}

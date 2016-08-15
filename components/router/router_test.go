@@ -54,14 +54,10 @@ func TestRouter_GetWithArguments(t *testing.T) {
 	router.Get("/hello/:name/:number/world",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			state := router.GetState(r)
-			args, ok := state.Get("path")
-			if !ok {
-				http.Error(w, "Can't read path arguments", 500)
-			}
-			arguments := args.(map[string]string)
+			name, _ := state.Get("name")
+			number, _ := state.Get("number")
 			fmt.Fprintf(w, "/hello/%s/world/%s",
-				arguments["name"],
-				arguments["number"])
+				name, number)
 		})).Name("hello")
 	ts := httptest.NewServer(router)
 
