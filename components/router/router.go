@@ -3,32 +3,24 @@
 package router
 
 import (
-	"github.com/estebarb/ion/plugin"
-	"github.com/estebarb/ion/reqstate"
+	"github.com/estebarb/ion/components/reqctx"
 	"html/template"
 	"net/http"
 	"strings"
 )
 
 type Router struct {
-	plugin.Minimal
-	routeByName   map[string]route
+	routeByName   map[string]*route
 	routeByMethod map[string]([]*route)
-	states        *reqstate.StateContainer
-	preconditions []http.Handler
+	states        *reqctx.StateContainer
 }
 
 func New() *Router {
 	return &Router{
-		routeByName:   make(map[string]route),
-		routeByMethod: make(map[string]([]route)),
-		states:        reqstate.NewStateContainer(),
-		preconditions: []http.Handler{},
+		routeByName:   make(map[string]*route),
+		routeByMethod: make(map[string]([]*route)),
+		states:        reqctx.NewStateContainer(),
 	}
-}
-
-func (r *Router) GetNamespace() string {
-	return "router"
 }
 
 type route struct {
@@ -47,18 +39,12 @@ func splitWithoutTrailingSlash(str string) []string {
 	return parsedPath
 }
 
-func (r *Router) GetState(req *http.Request) *reqstate.State {
+func (r *Router) GetState(req *http.Request) *reqctx.State {
 	return r.states.GetState(req)
 }
 
-func (r *Router) GetStateContainer() *reqstate.StateContainer {
+func (r *Router) GetStateContainer() *reqctx.StateContainer {
 	return r.states
-}
-
-func (r *Router) GetTemplateFuncs() map[string]interface{} {
-	return map[string]interface{}{
-		"router_url": r.BuildRoute,
-	}
 }
 
 // BuildRoute returns a route corresponding to de requested
@@ -70,19 +56,31 @@ func (r *Router) BuildRoute(name string, args ...string) template.URL {
 	if !ok || len(args)%2 != 0 {
 		return ""
 	}
-	dst := route.path
+
+	dst := make([]string, len(route.parsedPath))
+	copy(dst, route.parsedPath)
 	for i := 0; i < len(args); i += 2 {
-		dst = strings.Replace(dst, "/:"+args[i], "/"+args[i+1], 1)
+		for k, v := range dst {
+			if len(v) > 1 && v[0] == ':' && string(v[1:]) == args[i] {
+				dst[k] = args[i+1]
+			}
+		}
 	}
-	return template.URL(dst)
+
+	for _, v := range dst {
+		if len(v) > 0 && v[0] == ':' {
+			return template.URL("")
+		}
+	}
+	return template.URL(strings.Join(dst, "/"))
 }
 
 func (r *Router) Handler(method string,
 	path string,
-	handler http.Handler) *Route{
+	handler http.Handler) *Route {
 	routes, ok := r.routeByMethod[method]
 	if !ok {
-		routes = make([]route, 0)
+		routes = make([]*route, 0)
 	}
 
 	newRoute := &route{
@@ -94,14 +92,14 @@ func (r *Router) Handler(method string,
 	routes = append(routes, newRoute)
 	r.routeByMethod[method] = routes
 	return &Route{
-		route: newRoute,
+		route:  newRoute,
 		router: r,
 	}
 }
 
 func (r *Router) HandleFunc(method string,
 	path string,
-	handler http.HandlerFunc) *Route{
+	handler http.HandlerFunc) *Route {
 	return r.Handler(method, path, http.HandlerFunc(handler))
 }
 
@@ -115,7 +113,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if eq {
 			state := r.states.GetState(req)
 			state.Set("path", values)
-			r.states.ClearState(route.handler).ServeHTTP(w, req)
+			r.GetStateContainer().Middleware(route.handler).ServeHTTP(w, req)
 			return
 		}
 	}
@@ -142,7 +140,7 @@ func equalPath(path, pattern []string) (map[string]string, bool) {
 
 type Route struct {
 	router *Router
-	route *route
+	route  *route
 }
 
 func (r *Route) Name(name string) *Route {
