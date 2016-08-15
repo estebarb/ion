@@ -2,13 +2,27 @@ package main
 
 import (
 	"fmt"
-	"github.com/estebarb/ion"
 	"net/http"
+	"github.com/estebarb/ion/components/router"
 )
 
-func hello(w http.ResponseWriter, r *http.Request) {
-	value := ion.URLArgs(r, "name")
-	if value != "" {
+type App struct {
+	*router.Router
+}
+
+func NewApp() *App {
+	app := &App{
+		Router: router.New(),
+	}
+	app.GetFunc("/", app.hello)
+	app.GetFunc("/:name", app.hello)
+	return app
+}
+
+func (app *App) hello(w http.ResponseWriter, r *http.Request) {
+	state := app.GetState(r)
+	value, exists := state.Get("name")
+	if exists {
 		fmt.Fprintf(w, "Hello, %v!", value)
 	} else {
 		fmt.Fprint(w, "Hello world!")
@@ -16,8 +30,5 @@ func hello(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	r := ion.NewRouter()
-	r.GetFunc("/", hello)
-	r.GetFunc("/{name}", hello)
-	http.ListenAndServe(":8080", r)
+	http.ListenAndServe(":5000", NewApp())
 }
