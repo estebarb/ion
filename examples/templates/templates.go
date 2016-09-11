@@ -2,9 +2,9 @@ package main
 
 import (
 	"github.com/estebarb/ion"
+	"github.com/estebarb/ion/components/reqctx"
 	"net/http"
 	"strings"
-	"github.com/estebarb/ion/components/reqctx"
 )
 
 type App struct {
@@ -21,7 +21,7 @@ func (app *App) hello(w http.ResponseWriter, r *http.Request) {
 func main() {
 	// Creates a new router
 	app := &App{
-		Ion: ion.New(),
+		Ion:    ion.New(),
 		States: reqctx.NewStateContainer(),
 	}
 

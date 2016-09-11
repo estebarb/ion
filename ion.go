@@ -45,18 +45,18 @@ package ion
 
 import (
 	"encoding/json"
+	"github.com/estebarb/ion/components/chain"
+	"github.com/estebarb/ion/components/router"
+	"github.com/estebarb/ion/components/templates"
 	"io/ioutil"
 	"net/http"
-	"github.com/estebarb/ion/components/router"
-	"github.com/estebarb/ion/components/chain"
-	"github.com/estebarb/ion/components/templates"
 )
 
 // Ion represents an Ion web application
 type Ion struct {
-	Router *router.Router
+	Router     *router.Router
 	Middleware []*chain.Chain
-	Template *templates.Templates
+	Template   *templates.Templates
 }
 
 /*
@@ -64,9 +64,9 @@ Returns a new router, with no middleware.
 */
 func New() *Ion {
 	return &Ion{
-		Router: router.New(),
+		Router:     router.New(),
 		Middleware: []*chain.Chain{chain.New()},
-		Template: templates.New(),
+		Template:   templates.New(),
 	}
 }
 
@@ -133,7 +133,6 @@ func (a *Ion) PatchFunc(path string, handler http.HandlerFunc) *router.Route {
 func (a *Ion) PutFunc(path string, handler http.HandlerFunc) *router.Route {
 	return a.Router.Put(path, a.generateHandlerFunc(handler))
 }
-
 
 // This interface works with RegisterREST to provide a shortcut
 // to register an RESTful endpoint.
