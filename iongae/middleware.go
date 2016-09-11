@@ -1,11 +1,12 @@
 // +build appengine
+
+// Middleware specific for GAE
 package iongae
 
 import (
 	"appengine"
 	"net/http"
 )
-
 
 func GAEPanicMiddleware(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
