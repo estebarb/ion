@@ -191,12 +191,12 @@ func TestHandlers(t *testing.T) {
 
 	ts := httptest.NewServer(router)
 
-	for _, method := range []string{http.MethodGet,
-		http.MethodPost,
-		http.MethodPut,
-		http.MethodDelete,
-		http.MethodPatch,
-		http.MethodOptions} {
+	for _, method := range []string{"GET",
+		"POST",
+		"PUT",
+		"DELETE",
+		"PATCH",
+		"OPTIONS"} {
 		req, err := http.NewRequest(method, ts.URL, nil)
 		if err != nil {
 			t.Error(err)
