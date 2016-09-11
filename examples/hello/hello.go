@@ -2,17 +2,17 @@ package main
 
 import (
 	"fmt"
+	"github.com/estebarb/ion"
 	"net/http"
-	"github.com/estebarb/ion/components/router"
 )
 
 type App struct {
-	*router.Router
+	*ion.Ion
 }
 
 func NewApp() *App {
 	app := &App{
-		Router: router.New(),
+		Ion: ion.New(),
 	}
 	app.GetFunc("/", app.hello)
 	app.GetFunc("/:name", app.hello)
@@ -20,7 +20,7 @@ func NewApp() *App {
 }
 
 func (app *App) hello(w http.ResponseWriter, r *http.Request) {
-	state := app.GetState(r)
+	state := app.Router.GetState(r)
 	value, exists := state.Get("name")
 	if exists {
 		fmt.Fprintf(w, "Hello, %v!", value)
@@ -30,5 +30,5 @@ func (app *App) hello(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.ListenAndServe(":5000", NewApp())
+	http.ListenAndServe(":5500", NewApp())
 }

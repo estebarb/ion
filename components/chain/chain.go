@@ -12,6 +12,14 @@ func New() *Chain {
 	return &Chain{}
 }
 
+func Join(chains ...*Chain) *Chain {
+	merged := New()
+	for _, ch := range chains {
+		merged.middlewares = append(merged.middlewares, ch.middlewares...)
+	}
+	return merged
+}
+
 func (m *Chain) Add(h Middleware) *Chain {
 	m.middlewares = append(m.middlewares, h)
 	return m

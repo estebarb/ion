@@ -2,31 +2,10 @@
 package middleware
 
 import (
-	"github.com/estebarb/ion/context"
-	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"time"
 )
-
-/*
-Ion adds the arguments to the request context, using
-this key. The application can retrieve the arguments
-using:
-
-	name := ion.URLArgs(r, "name")
-*/
-const urlargs = "urlargs"
-
-// Inserts the path variables in the context
-func ContextMiddleware(next http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
-		context.Set(r, urlargs, mux.Vars(r))
-		defer context.Clear(r)
-		next.ServeHTTP(w, r)
-	}
-	return http.HandlerFunc(fn)
-}
 
 // Provides a logging middleware
 func LoggingMiddleware(next http.Handler) http.Handler {

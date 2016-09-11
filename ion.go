@@ -14,9 +14,14 @@ A short example:
 		"net/http"
 	)
 
-	func hello(w http.ResponseWriter, r *http.Request) {
-		value := ion.URLArgs(r, "name")
-		if value != "" {
+	type App struct {
+		*ion.Ion
+	}
+
+	func (app *App) hello(w http.ResponseWriter, r *http.Request) {
+		state := app.Router.GetState(r)
+	    value, exists := state.Get("name")
+	    if exists
 			fmt.Fprintf(w, "Hello, %v!", value)
 		} else {
 			fmt.Fprint(w, "Hello world!")
@@ -24,10 +29,12 @@ A short example:
 	}
 
 	func main() {
-		r := ion.NewRouter()
-		r.GetFunc("/", hello)
-		r.GetFunc("/{name}", hello)
-		http.ListenAndServe(":8080", r)
+		app := &App{
+			Ion: ion.New(),
+		}
+		app.GetFunc("/", app.hello)
+		app.GetFunc("/:name", app.hello)
+		http.ListenAndServe(":5500", app)
 	}
 
 
@@ -38,116 +45,95 @@ package ion
 
 import (
 	"encoding/json"
-	"github.com/estebarb/ion/context"
-	mw "github.com/estebarb/ion/middleware"
-	"github.com/gorilla/mux"
-	"github.com/justinas/alice"
-	"html/template"
 	"io/ioutil"
 	"net/http"
+	"github.com/estebarb/ion/components/router"
+	"github.com/estebarb/ion/components/chain"
+	"github.com/estebarb/ion/components/templates"
 )
 
-// This is the router used by Ion. It contains gorilla mux router,
-// the middleware manager alice and adapter
-// functions that make easy to use the Go http.Handler
-type Router struct {
-	*mux.Router
-	Middleware alice.Chain
+// Ion represents an Ion web application
+type Ion struct {
+	Router *router.Router
+	Middleware []*chain.Chain
+	Template *templates.Templates
 }
 
 /*
 Returns a new router, with no middleware.
 */
-func NewRouter() *Router {
-	return &Router{mux.NewRouter(), alice.New(mw.ContextMiddleware)}
-}
-
-/*
-Returns a new router, configured with the middlewares
-provided.
-*/
-func NewRouterDefaults(middleware ...alice.Constructor) *Router {
-	middleware = append([]alice.Constructor{mw.ContextMiddleware},
-		middleware...)
-	r := &Router{
-		mux.NewRouter(),
-		alice.New(middleware...),
-	}
-	return r
-}
-
-// Registers a new request handler (http.Handler) for the given path and method.
-// It also executes the current Middleware in the settings.
-func (r *Router) MethodHandle(method, path string, handle http.Handler) *mux.Route {
-	return r.Methods(method).Path(path).Handler(r.Middleware.Then(handle))
-}
-
-// Registers a new request handler (http.HandlerFunc) for the given path and method.
-// It also executes the current Middleware in the settings.
-func (r *Router) MethodHandleFunc(method, path string, handle http.HandlerFunc) *mux.Route {
-	return r.Methods(method).Path(path).Handler(r.Middleware.ThenFunc(handle))
-}
-
-// Shortcut for router.MethodHandle("DELETE", path, handler)
-func (r *Router) DELETE(path string, handler http.Handler) *mux.Route {
-	return r.MethodHandle("DELETE", path, handler)
-}
-
-// Shortcut for router.MethodHandle("GET", path, handler)
-func (r *Router) GET(path string, handler http.Handler) *mux.Route {
-	return r.MethodHandle("GET", path, handler)
-}
-
-// Shortcut for router.MethodHandle("POST", path, handler)
-func (r *Router) POST(path string, handler http.Handler) *mux.Route {
-	return r.MethodHandle("POST", path, handler)
-}
-
-// Shortcut for router.MethodHandle("PATCH", path, handler)
-func (r *Router) PATCH(path string, handler http.Handler) *mux.Route {
-	return r.MethodHandle("PATCH", path, handler)
-}
-
-// Shortcut for router.MethodHandle("PUT", path, handler)
-func (r *Router) PUT(path string, handler http.Handler) *mux.Route {
-	return r.MethodHandle("PUT", path, handler)
-}
-
-// Shortcut for router.MethodHandleFunc("DELETE", path, handler)
-func (r *Router) DeleteFunc(path string, handler http.HandlerFunc) *mux.Route {
-	return r.MethodHandleFunc("DELETE", path, handler)
-}
-
-// Shortcut for router.MethodHandleFunc("GET", path, handler)
-func (r *Router) GetFunc(path string, handler http.HandlerFunc) *mux.Route {
-	return r.MethodHandleFunc("GET", path, handler)
-}
-
-// Shortcut for router.MethodHandleFunc("POST", path, handler)
-func (r *Router) PostFunc(path string, handler http.HandlerFunc) *mux.Route {
-	return r.MethodHandleFunc("POST", path, handler)
-}
-
-// Shortcut for router.MethodHandleFunc("PATCH", path, handler)
-func (r *Router) PatchFunc(path string, handler http.HandlerFunc) *mux.Route {
-	return r.MethodHandleFunc("PATCH", path, handler)
-}
-
-// Shortcut for router.MethodHandleFunc("PUT", path, handler)
-func (r *Router) PutFunc(path string, handler http.HandlerFunc) *mux.Route {
-	return r.MethodHandleFunc("PUT", path, handler)
-}
-
-// Returns a handler that can render the given templates. The templates
-// receives as parameters the context associated to the current
-// request.
-func RenderTemplate(t *template.Template) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// Adds data in context to template context
-		ctx, _ := context.GetAll(r)
-		t.Execute(w, ctx)
+func New() *Ion {
+	return &Ion{
+		Router: router.New(),
+		Middleware: []*chain.Chain{chain.New()},
+		Template: templates.New(),
 	}
 }
+
+func (a *Ion) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	a.Router.ServeHTTP(w, r)
+}
+
+func (a *Ion) generateHandler(handle http.Handler) http.Handler {
+	return chain.Join(a.Middleware...).Then(handle)
+}
+
+func (a *Ion) generateHandlerFunc(handle http.HandlerFunc) http.Handler {
+	return chain.Join(a.Middleware...).ThenFunc(handle)
+}
+
+// MethodHandle registers a request handler for the given path, and adds the current
+// middleware in Ion settings.
+func (a *Ion) MethodHandle(method, path string, handle http.Handler) *router.Route {
+	return a.Router.Handler(method, path, a.generateHandler(handle))
+}
+
+// MethodHandleFunc registers a request handler for the given path, and adds the current
+// middleware in Ion settings.
+func (a *Ion) MethodHandleFunc(method, path string, handle http.HandlerFunc) *router.Route {
+	return a.Router.Handler(method, path, a.generateHandlerFunc(handle))
+}
+
+func (a *Ion) Delete(path string, handler http.Handler) *router.Route {
+	return a.Router.Delete(path, a.generateHandler(handler))
+}
+
+func (a *Ion) Get(path string, handler http.Handler) *router.Route {
+	return a.Router.Get(path, a.generateHandler(handler))
+}
+
+func (a *Ion) Post(path string, handler http.Handler) *router.Route {
+	return a.Router.Post(path, a.generateHandler(handler))
+}
+
+func (a *Ion) Patch(path string, handler http.Handler) *router.Route {
+	return a.Router.Patch(path, a.generateHandler(handler))
+}
+
+func (a *Ion) Put(path string, handler http.Handler) *router.Route {
+	return a.Router.Put(path, a.generateHandler(handler))
+}
+
+func (a *Ion) DeleteFunc(path string, handler http.HandlerFunc) *router.Route {
+	return a.Router.Delete(path, a.generateHandlerFunc(handler))
+}
+
+func (a *Ion) GetFunc(path string, handler http.HandlerFunc) *router.Route {
+	return a.Router.Get(path, a.generateHandlerFunc(handler))
+}
+
+func (a *Ion) PostFunc(path string, handler http.HandlerFunc) *router.Route {
+	return a.Router.Post(path, a.generateHandlerFunc(handler))
+}
+
+func (a *Ion) PatchFunc(path string, handler http.HandlerFunc) *router.Route {
+	return a.Router.Patch(path, a.generateHandlerFunc(handler))
+}
+
+func (a *Ion) PutFunc(path string, handler http.HandlerFunc) *router.Route {
+	return a.Router.Put(path, a.generateHandlerFunc(handler))
+}
+
 
 // This interface works with RegisterREST to provide a shortcut
 // to register an RESTful endpoint.
@@ -164,22 +150,16 @@ type RESTendpoint interface {
 // It will register the following routes:
 // - GET  path		(list function)
 // - POST path		(post function)
-// - GET  path/{id}	(get function)
-// - PUT  path/{id}	(put function)
-// - DELETE  path/{id}	(delete function)
+// - GET  path/:id:	(get function)
+// - PUT  path/:id:	(put function)
+// - DELETE  path/:id	(delete function)
 // The path MUST include the trailing slash.
-func (r *Router) RegisterREST(path string, handler RESTendpoint) {
-	r.GetFunc(path+"{id}", handler.GET)
-	r.PutFunc(path+"{id}", handler.PUT)
-	r.DeleteFunc(path+"{id}", handler.DELETE)
-	r.GetFunc(path, handler.LIST)
-	r.PostFunc(path, handler.POST)
-}
-
-// Returns a named argument from the request URL
-func URLArgs(r *http.Request, name string) string {
-	vars := mux.Vars(r)
-	return vars[name]
+func (a *Ion) RegisterREST(path string, handler RESTendpoint) {
+	a.GetFunc(path+"/:id", handler.GET)
+	a.PutFunc(path+"/:id", handler.PUT)
+	a.DeleteFunc(path+"/:id", handler.DELETE)
+	a.GetFunc(path, handler.LIST)
+	a.PostFunc(path, handler.POST)
 }
 
 // This is the simpler possible handler: DoNothing do nothing.
@@ -203,6 +183,7 @@ func MarshalJSON(w http.ResponseWriter, value interface{}) error {
 // Returns the unmarshaled value from the request body
 func UnmarshalJSON(r *http.Request, value interface{}) error {
 	body, err := ioutil.ReadAll(r.Body)
+	r.Body.Close()
 	if err != nil {
 		return err
 	}
