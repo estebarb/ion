@@ -6,21 +6,14 @@ import (
 	"net/http"
 )
 
-type App struct {
-	*ion.Ion
+func NewApp() *ion.Ion {
+	ion.GetFunc("/", hello)
+	ion.GetFunc("/:name", hello)
+	return ion.App
 }
 
-func NewApp() *App {
-	app := &App{
-		Ion: ion.New(),
-	}
-	app.GetFunc("/", app.hello)
-	app.GetFunc("/:name", app.hello)
-	return app
-}
-
-func (app *App) hello(w http.ResponseWriter, r *http.Request) {
-	state := app.Router.GetState(r)
+func hello(w http.ResponseWriter, r *http.Request) {
+	state := ion.App.Router.GetState(r)
 	value, exists := state.Get("name")
 	if exists {
 		fmt.Fprintf(w, "Hello, %v!", value)

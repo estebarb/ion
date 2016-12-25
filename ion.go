@@ -59,6 +59,70 @@ type Ion struct {
 	Template   *templates.Templates
 }
 
+var App *Ion
+
+func init(){
+	App = New()
+}
+
+func ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	App.Router.ServeHTTP(w, r)
+}
+
+// MethodHandle registers a request handler for the given path, and adds the current
+// middleware in Ion settings.
+func MethodHandle(method, path string, handle http.Handler) *router.Route {
+	return App.Router.Handler(method, path, App.generateHandler(handle))
+}
+
+// MethodHandleFunc registers a request handler for the given path, and adds the current
+// middleware in Ion settings.
+func MethodHandleFunc(method, path string, handle http.HandlerFunc) *router.Route {
+	return App.Router.Handler(method, path, App.generateHandlerFunc(handle))
+}
+
+func Delete(path string, handler http.Handler) *router.Route {
+	return App.Router.Delete(path, App.generateHandler(handler))
+}
+
+func Get(path string, handler http.Handler) *router.Route {
+	return App.Router.Get(path, App.generateHandler(handler))
+}
+
+func Post(path string, handler http.Handler) *router.Route {
+	return App.Router.Post(path, App.generateHandler(handler))
+}
+
+func Patch(path string, handler http.Handler) *router.Route {
+	return App.Router.Patch(path, App.generateHandler(handler))
+}
+
+func Put(path string, handler http.Handler) *router.Route {
+	return App.Router.Put(path, App.generateHandler(handler))
+}
+
+func DeleteFunc(path string, handler http.HandlerFunc) *router.Route {
+	return App.Router.Delete(path, App.generateHandlerFunc(handler))
+}
+
+func GetFunc(path string, handler http.HandlerFunc) *router.Route {
+	return App.Router.Get(path, App.generateHandlerFunc(handler))
+}
+
+func PostFunc(path string, handler http.HandlerFunc) *router.Route {
+	return App.Router.Post(path, App.generateHandlerFunc(handler))
+}
+
+func PatchFunc(path string, handler http.HandlerFunc) *router.Route {
+	return App.Router.Patch(path, App.generateHandlerFunc(handler))
+}
+
+func PutFunc(path string, handler http.HandlerFunc) *router.Route {
+	return App.Router.Put(path, App.generateHandlerFunc(handler))
+}
+
+
+
 /*
 Returns a new router, with no middleware.
 */
