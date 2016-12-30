@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/estebarb/ion"
 	"net/http"
+	"github.com/estebarb/ion/components/router"
 )
 
 type restHandler struct {
@@ -11,10 +12,10 @@ type restHandler struct {
 }
 
 func (c *restHandler) URLArgs(r *http.Request, key string) string {
-	state := c.Router.GetState(r)
-	value, ok := state.Get(key)
+	state := c.Context(r).(router.IPathParam)
+	value, ok := state.PathParams()[key]
 	if ok {
-		return value.(string)
+		return value
 	} else {
 		return ""
 	}
@@ -44,9 +45,8 @@ func (c restHandler) DELETE(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	app := ion.New()
 	var rest restHandler
-	app.GetFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	ion.GetFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, `Please try the following endpoints:
 	- GET       /test/      Lists the items
 	- POST      /test/      Post a new item
@@ -54,6 +54,6 @@ func main() {
 	- DELETE    /test/{id}   Deletes a item
 	- PUT       /test/{id}   Updates a item`)
 	})
-	app.RegisterREST("/test/", rest)
-	http.ListenAndServe(":8080", app)
+	ion.App.RegisterREST("/test/", rest)
+	http.ListenAndServe(":8080", ion.App)
 }

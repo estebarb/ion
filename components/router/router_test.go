@@ -28,7 +28,7 @@ func TestSplitWithoutTrailingSlash(t *testing.T) {
 }
 
 func TestRouter_Get(t *testing.T) {
-	r := New()
+	r := NewDefault()
 	r.GetFunc("/hello",
 		func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("Hello"))
@@ -50,16 +50,16 @@ func TestRouter_Get(t *testing.T) {
 }
 
 func TestRouter_GetWithArguments(t *testing.T) {
-	router := New()
-	router.Get("/hello/:name/:number/world",
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			state := router.GetState(r)
-			name, _ := state.Get("name")
-			number, _ := state.Get("number")
+	r := NewDefault()
+	r.Get("/hello/:name/:number/world",
+		http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			state := r.Context(req).(IPathParam)
+			name, _ := state.PathParams()["name"]
+			number, _ := state.PathParams()["number"]
 			fmt.Fprintf(w, "/hello/%s/world/%s",
 				name, number)
 		})).Name("hello")
-	ts := httptest.NewServer(router)
+	ts := httptest.NewServer(r)
 
 	res, err := http.Get(ts.URL + "/hello/test/001/world")
 	if err != nil {
@@ -76,25 +76,25 @@ func TestRouter_GetWithArguments(t *testing.T) {
 }
 
 func TestBuildRoute(t *testing.T) {
-	router := New()
-	router.Get("/hello/:name/:number/world",
+	r := NewDefault()
+	r.Get("/hello/:name/:number/world",
 		http.NotFoundHandler()).Name("hello")
-	url := router.BuildRoute("hello", "name", "test", "number", "001")
+	url := r.BuildRoute("hello", "name", "test", "number", "001")
 	if string(url) != "/hello/test/001/world" {
 		t.Error("Expecting /hello/test/001/world, received:", string(url))
 	}
 
-	url = router.BuildRoute("void", "name", "test", "number", "001")
+	url = r.BuildRoute("void", "name", "test", "number", "001")
 	if string(url) != "" {
 		t.Error("Expecting empty string, got:", url)
 	}
 
-	url = router.BuildRoute("hello", "name", "test", "number")
+	url = r.BuildRoute("hello", "name", "test", "number")
 	if string(url) != "" {
 		t.Error("Expecting empty string, got:", url)
 	}
 
-	url = router.BuildRoute("hello", "name", "test")
+	url = r.BuildRoute("hello", "name", "test")
 	if string(url) != "" {
 		t.Error("Expecting empty string, got:", url)
 	}
@@ -105,13 +105,13 @@ func dummy(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestNotFound(t *testing.T) {
-	router := New()
-	router.GetFunc("/abc", dummy)
-	router.GetFunc("/abcd", dummy)
-	router.GetFunc("/:name", dummy)
-	router.GetFunc("/:name/xyz", dummy)
+	r := NewDefault()
+	r.GetFunc("/abc", dummy)
+	r.GetFunc("/abcd", dummy)
+	r.GetFunc("/:name", dummy)
+	r.GetFunc("/:name/xyz", dummy)
 
-	ts := httptest.NewServer(router)
+	ts := httptest.NewServer(r)
 
 	resp, err := http.Get(ts.URL + "/abc")
 	if err != nil {
@@ -174,22 +174,22 @@ func TestHandlers(t *testing.T) {
 		}
 	}
 
-	router := New()
-	router.Get("/", http.HandlerFunc(fun("GET")))
-	router.Post("/", http.HandlerFunc(fun("POST")))
-	router.Put("/", http.HandlerFunc(fun("PUT")))
-	router.Delete("/", http.HandlerFunc(fun("DELETE")))
-	router.Patch("/", http.HandlerFunc(fun("PATCH")))
-	router.Options("/", http.HandlerFunc(fun("OPTIONS")))
+	r := NewDefault()
+	r.Get("/", http.HandlerFunc(fun("GET")))
+	r.Post("/", http.HandlerFunc(fun("POST")))
+	r.Put("/", http.HandlerFunc(fun("PUT")))
+	r.Delete("/", http.HandlerFunc(fun("DELETE")))
+	r.Patch("/", http.HandlerFunc(fun("PATCH")))
+	r.Options("/", http.HandlerFunc(fun("OPTIONS")))
 
-	router.GetFunc("/", fun("GET"))
-	router.PostFunc("/", fun("POST"))
-	router.PutFunc("/", fun("PUT"))
-	router.DeleteFunc("/", fun("DELETE"))
-	router.PatchFunc("/", fun("PATCH"))
-	router.OptionsFunc("/", fun("OPTIONS"))
+	r.GetFunc("/", fun("GET"))
+	r.PostFunc("/", fun("POST"))
+	r.PutFunc("/", fun("PUT"))
+	r.DeleteFunc("/", fun("DELETE"))
+	r.PatchFunc("/", fun("PATCH"))
+	r.OptionsFunc("/", fun("OPTIONS"))
 
-	ts := httptest.NewServer(router)
+	ts := httptest.NewServer(r)
 
 	for _, method := range []string{"GET",
 		"POST",

@@ -4,27 +4,75 @@ package templates
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/estebarb/ion/components/reqctx"
 	"html/template"
 	"net/http"
 )
 
+var ErrUnableToFindLayout = errors.New("Unable to find requested layout")
+
 type Templates struct {
 	debug         bool
 	functionsMap  template.FuncMap
 	templates     *template.Template
-	states        map[string]*reqctx.StateContainer
+	states        *reqctx.State
 	defaultLayout string
+}
+
+type ITemplateCtx interface {
+	SetLayout(name string)
+	Layout() string
+	SetView(name string)
+	View() string
+	TemplateValues() map[string]interface{}
+	SetTemplateValue(key string, value interface{})
+	TemplateValue(key string) (interface{}, bool)
+}
+
+type TemplateCtx struct {
+	LayoutName string
+	ViewName   string
+	Values     map[string]interface{}
+}
+
+func (t *TemplateCtx) SetLayout(name string) {
+	t.LayoutName = name
+}
+func (t *TemplateCtx) Layout() string {
+	return t.LayoutName
+}
+func (t *TemplateCtx) SetView(name string) {
+	t.ViewName = name
+}
+func (t *TemplateCtx) View() string {
+	return t.ViewName
+}
+func (t *TemplateCtx) TemplateValues() map[string]interface{} {
+	return t.Values
+}
+func (t *TemplateCtx) SetTemplateValue(key string, value interface{}) {
+	t.Values[key] = value
+}
+func (t *TemplateCtx) TemplateValue(key string) (interface{}, bool) {
+	v, ok := t.Values[key]
+	return v, ok
+}
+
+func ContextFactory() interface{} {
+	return &TemplateCtx{
+		Values: make(map[string]interface{}),
+	}
 }
 
 // Creates a new template that has a default layout ("layout")
 // and some additional functions:
 // render <name> <ctx>  -> Renders other template
-func New() *Templates {
+func New(state *reqctx.State) *Templates {
 	t := &Templates{
 		functionsMap:  make(template.FuncMap),
-		states:        make(map[string]*reqctx.StateContainer),
+		states:        state,
 		defaultLayout: "layout",
 	}
 	t.AddFunc("render", t.dispatchTemplate)
@@ -41,10 +89,6 @@ func (t *Templates) SetDefaultLayout(name string) {
 
 func (t *Templates) AddFunc(name string, fun interface{}) {
 	t.functionsMap[name] = fun
-}
-
-func (t *Templates) AddStateContainer(namespace string, state *reqctx.StateContainer) {
-	t.states[namespace] = state
 }
 
 func (t *Templates) LoadPattern(pattern string) error {
@@ -78,12 +122,8 @@ func (t *Templates) execute(name string, env interface{}) string {
 	}
 }
 
-func (t *Templates) BuildContext(r *http.Request) map[string]interface{} {
-	ctx := make(map[string]interface{})
-	for namespace, stateContainer := range t.states {
-		ctx[namespace] = stateContainer.GetState(r).GetAll()
-	}
-	return ctx
+func (t *Templates) BuildContext(r *http.Request) interface{} {
+	return t.states.Context(r)
 }
 
 func (t *Templates) RenderTemplate(tmpl string) http.Handler {
@@ -92,9 +132,14 @@ func (t *Templates) RenderTemplate(tmpl string) http.Handler {
 
 func (t *Templates) RenderWithLayout(layout, view string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := t.BuildContext(r)
-		ctx["__view__"] = view
-		t.Lookup(layout).Execute(w, ctx)
+		ctx := t.BuildContext(r).(ITemplateCtx)
+		ctx.SetView(view)
+		view := t.Lookup(layout)
+		if view != nil {
+			view.Execute(w, ctx)
+		} else {
+			panic(ErrUnableToFindLayout)
+		}
 	})
 }
 

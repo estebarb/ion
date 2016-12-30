@@ -1,32 +1,32 @@
 package futures
 
 import (
-	"time"
-	"sync"
 	"math/rand"
+	"sync"
+	"time"
 )
 
 type Expirable struct {
 	sync.Mutex
-	timeout time.Duration
+	timeout   time.Duration
 	timestamp time.Time
-	value interface{}
-	generator func()interface{}
+	value     interface{}
+	generator func() interface{}
 }
 
-func NewExpirable(timeout time.Duration, generator func()interface{}) *Expirable{
+func NewExpirable(timeout time.Duration, generator func() interface{}) *Expirable {
 	return &Expirable{
-		timeout: timeout,
-		value: nil,
+		timeout:   timeout,
+		value:     nil,
 		generator: generator,
 	}
 }
 
-func (e *Expirable) Read()interface{} {
+func (e *Expirable) Read() interface{} {
 	return e.ReadFunc(e.generator)
 }
 
-func (e *Expirable) ReadFunc(f func()interface{})interface{} {
+func (e *Expirable) ReadFunc(f func() interface{}) interface{} {
 	e.Lock()
 	defer e.Unlock()
 	if time.Since(e.timestamp) > e.timeout || e.value == nil {
@@ -40,7 +40,7 @@ type ExpirablePool struct {
 	Expirables []*Expirable
 }
 
-func NewExpirablePool(timeout time.Duration, size int, generator func()interface{}) *ExpirablePool{
+func NewExpirablePool(timeout time.Duration, size int, generator func() interface{}) *ExpirablePool {
 	pool := &ExpirablePool{
 		Expirables: make([]*Expirable, size),
 	}
@@ -54,12 +54,10 @@ func (p ExpirablePool) Pick() *Expirable {
 	return p.Expirables[rand.Intn(len(p.Expirables))]
 }
 
-func (p *ExpirablePool) Read()interface{} {
+func (p *ExpirablePool) Read() interface{} {
 	return p.Pick().Read()
 }
 
-func (p *ExpirablePool) ReadFunc(f func()interface{})interface{} {
+func (p *ExpirablePool) ReadFunc(f func() interface{}) interface{} {
 	return p.Pick().ReadFunc(f)
 }
-
-

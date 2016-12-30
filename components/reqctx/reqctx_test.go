@@ -7,17 +7,17 @@ import (
 )
 
 func TestMiddleware(t *testing.T) {
-	sc := NewStateContainer()
+	sc := New(BasicContextFactory)
 	handler := sc.Middleware
 
 	dummy := func(w http.ResponseWriter, r *http.Request) {
-		state := sc.GetState(r)
-		for k, v := range state.GetAll() {
-			if v2, exists := state.Get(k); !exists || v.(string) != v2.(string) {
+		state := sc.Context(r).(map[string]interface{})
+		for k, v := range state {
+			if v2, exists := state[k]; !exists || v.(string) != v2.(string) {
 				t.Error("GetAll key/values doesn't correspond with Get results")
 			}
 		}
-		_, exists := state.Get("k2")
+		_, exists := state["k2"]
 		if exists {
 			t.Error("k2 should have been deleted by step m2")
 		}
@@ -25,19 +25,20 @@ func TestMiddleware(t *testing.T) {
 
 	m1 := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			state := sc.GetState(r)
-			state.Set("k1", "true")
-			state.Set("k2", "true")
-			state.Set("k3", "true")
+			state := sc.Context(r).(map[string]interface{})
+			state["k1"] = "true"
+			state["k2"] = "true"
+			state["k3"] = "true"
+			r = sc.WithContext(state, r)
 			next.ServeHTTP(w, r)
 		})
 	}
 
 	m2 := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			state := sc.GetState(r)
+			state := sc.Context(r).(map[string]interface{})
 			for _, key := range []string{"k1", "k2"} {
-				field, exists := state.Get(key)
+				field, exists := state[key]
 				if !exists {
 					t.Errorf("Expecting %s=true, but %s doesn't exists",
 						key, key,
@@ -50,7 +51,8 @@ func TestMiddleware(t *testing.T) {
 						field)
 				}
 			}
-			state.Delete("k2")
+			delete(state, "k2")
+			r = sc.WithContext(state, r)
 			next.ServeHTTP(w, r)
 		})
 	}
@@ -59,9 +61,9 @@ func TestMiddleware(t *testing.T) {
 
 	http.Get(s.URL)
 
-	if len(sc.data) != 0 {
+	if sc.size() != 0 {
 		t.Error("Expecting empty StateContainer, but have ",
-			len(sc.data),
+			sc.size(),
 			"states")
 	}
 }

@@ -10,17 +10,42 @@ import (
 )
 
 type Router struct {
+	*reqctx.State
 	routeByName   map[string]*route
 	routeByMethod map[string]([]*route)
-	states        *reqctx.StateContainer
 }
 
-func New() *Router {
+type IPathParam interface {
+	PathParams() map[string]string
+	SetPathParams(values map[string]string)
+}
+
+type Path struct {
+	Params map[string]string
+}
+
+func (c *Path) PathParams() map[string]string {
+	return c.Params
+}
+
+func (c *Path) SetPathParams(values map[string]string) {
+	c.Params = values
+}
+
+func New(ContextFactory func() interface{}) *Router {
 	return &Router{
 		routeByName:   make(map[string]*route),
 		routeByMethod: make(map[string]([]*route)),
-		states:        reqctx.NewStateContainer(),
+		State:         reqctx.New(ContextFactory),
 	}
+}
+
+func NewDefault() *Router {
+	return New(ContextFactory)
+}
+
+func ContextFactory() interface{} {
+	return &Path{}
 }
 
 type route struct {
@@ -37,14 +62,6 @@ func splitWithoutTrailingSlash(str string) []string {
 		parsedPath = parsedPath[:len(parsedPath)-1]
 	}
 	return parsedPath
-}
-
-func (r *Router) GetState(req *http.Request) *reqctx.State {
-	return r.states.GetState(req)
-}
-
-func (r *Router) GetStateContainer() *reqctx.StateContainer {
-	return r.states
 }
 
 // BuildRoute returns a route corresponding to de requested
@@ -111,11 +128,11 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	for _, route := range routes {
 		values, eq := equalPath(path, route.parsedPath)
 		if eq {
-			state := r.states.GetState(req)
-			for key, value := range values {
-				state.Set(key, value)
-			}
-			r.GetStateContainer().Middleware(route.handler).ServeHTTP(w, req)
+			r.Middleware(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				context := r.Context(req)
+				context.(IPathParam).SetPathParams(values)
+				route.handler.ServeHTTP(w, req)
+			})).ServeHTTP(w, req)
 			return
 		}
 	}

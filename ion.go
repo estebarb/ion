@@ -47,100 +47,87 @@ import (
 	"encoding/json"
 	"github.com/estebarb/ion/components/chain"
 	"github.com/estebarb/ion/components/router"
-	"github.com/estebarb/ion/components/templates"
-	"github.com/estebarb/ion/components/reqctx"
 	"io/ioutil"
 	"net/http"
 )
 
 // Ion represents an Ion web application
 type Ion struct {
-	Router     *router.Router
+	*router.Router
 	Middleware []*chain.Chain
-	Template   *templates.Templates
-	State     *reqctx.StateContainer
 }
 
 var App *Ion
 
 func init() {
-	App = New()
+	App = New(router.ContextFactory)
 }
 
 func ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	App.Router.ServeHTTP(w, r)
+	App.ServeHTTP(w, r)
 }
 
 // MethodHandle registers a request handler for the given path, and adds the current
 // middleware in Ion settings.
 func MethodHandle(method, path string, handle http.Handler) *router.Route {
-	return App.Router.Handler(method, path, App.generateHandler(handle))
+	return App.Handler(method, path, App.generateHandler(handle))
 }
 
 // MethodHandleFunc registers a request handler for the given path, and adds the current
 // middleware in Ion settings.
 func MethodHandleFunc(method, path string, handle http.HandlerFunc) *router.Route {
-	return App.Router.Handler(method, path, App.generateHandlerFunc(handle))
+	return App.Handler(method, path, App.generateHandlerFunc(handle))
 }
 
 func Delete(path string, handler http.Handler) *router.Route {
-	return App.Router.Delete(path, App.generateHandler(handler))
+	return App.Delete(path, App.generateHandler(handler))
 }
 
 func Get(path string, handler http.Handler) *router.Route {
-	return App.Router.Get(path, App.generateHandler(handler))
+	return App.Get(path, App.generateHandler(handler))
 }
 
 func Post(path string, handler http.Handler) *router.Route {
-	return App.Router.Post(path, App.generateHandler(handler))
+	return App.Post(path, App.generateHandler(handler))
 }
 
 func Patch(path string, handler http.Handler) *router.Route {
-	return App.Router.Patch(path, App.generateHandler(handler))
+	return App.Patch(path, App.generateHandler(handler))
 }
 
 func Put(path string, handler http.Handler) *router.Route {
-	return App.Router.Put(path, App.generateHandler(handler))
+	return App.Put(path, App.generateHandler(handler))
 }
 
 func DeleteFunc(path string, handler http.HandlerFunc) *router.Route {
-	return App.Router.Delete(path, App.generateHandlerFunc(handler))
+	return App.Delete(path, App.generateHandlerFunc(handler))
 }
 
 func GetFunc(path string, handler http.HandlerFunc) *router.Route {
-	return App.Router.Get(path, App.generateHandlerFunc(handler))
+	return App.Get(path, App.generateHandlerFunc(handler))
 }
 
 func PostFunc(path string, handler http.HandlerFunc) *router.Route {
-	return App.Router.Post(path, App.generateHandlerFunc(handler))
+	return App.Post(path, App.generateHandlerFunc(handler))
 }
 
 func PatchFunc(path string, handler http.HandlerFunc) *router.Route {
-	return App.Router.Patch(path, App.generateHandlerFunc(handler))
+	return App.Patch(path, App.generateHandlerFunc(handler))
 }
 
 func PutFunc(path string, handler http.HandlerFunc) *router.Route {
-	return App.Router.Put(path, App.generateHandlerFunc(handler))
+	return App.Put(path, App.generateHandlerFunc(handler))
 }
 
 /*
 Returns a new router, with no middleware.
 */
-func New() *Ion {
+func New(contextFactory func() interface{}) *Ion {
 	app := &Ion{
-		Router:     router.New(),
+		Router:     router.New(contextFactory),
 		Middleware: []*chain.Chain{chain.New()},
-		Template:   templates.New(),
-		State:      reqctx.NewStateContainer(),
 	}
-	app.Template.AddStateContainer("Router",
-		app.Router.GetStateContainer())
-	app.Template.AddStateContainer("App", app.State)
 	return app
-}
-
-func (a *Ion) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	a.Router.ServeHTTP(w, r)
 }
 
 func (a *Ion) generateHandler(handle http.Handler) http.Handler {

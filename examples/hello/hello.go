@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/estebarb/ion"
+	"github.com/estebarb/ion/components/router"
 	"net/http"
 )
 
@@ -13,8 +14,9 @@ func NewApp() *ion.Ion {
 }
 
 func hello(w http.ResponseWriter, r *http.Request) {
-	state := ion.App.Router.GetState(r)
-	value, exists := state.Get("name")
+	context := ion.App.Context(r)
+	params := context.(router.IPathParam)
+	value, exists := params.PathParams()["name"]
 	if exists {
 		fmt.Fprintf(w, "Hello, %v!", value)
 	} else {

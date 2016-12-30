@@ -59,7 +59,7 @@ func doTest(t *testing.T, handler http.Handler, expected string) {
 }
 
 func TestTemplates_RenderWithLayout(t *testing.T) {
-	tmpl := New()
+	tmpl := New(reqctx.New(ContextFactory))
 	err := tmpl.LoadPattern("*.html")
 	if err != nil {
 		t.Error(err)
@@ -96,7 +96,7 @@ func TestTemplates_RenderWithLayout(t *testing.T) {
 }
 
 func TestTemplates_RenderTemplate(t *testing.T) {
-	tmpl := New()
+	tmpl := New(reqctx.New(ContextFactory))
 	err := tmpl.LoadPattern("*.html")
 	if err != nil {
 		t.Error(err)
@@ -107,7 +107,7 @@ func TestTemplates_RenderTemplate(t *testing.T) {
 }
 
 func TestTemplates_RenderView(t *testing.T) {
-	tmpl := New()
+	tmpl := New(reqctx.New(ContextFactory))
 	err := tmpl.LoadPattern("*.html")
 	if err != nil {
 		t.Error(err)
@@ -123,7 +123,7 @@ func TestTemplates_RenderView(t *testing.T) {
 }
 
 func TestTemplates_LoadPattern(t *testing.T) {
-	tmpl := New()
+	tmpl := New(reqctx.New(ContextFactory))
 	err := tmpl.LoadPattern("nomatch")
 	if err == nil {
 		t.Error("Expected error, but didn't happen")
@@ -134,18 +134,14 @@ func TestTemplates_LoadPattern(t *testing.T) {
 	}
 }
 
-func TestTemplates_AddStateContainer(t *testing.T) {
-	tmpl := New()
-
-	container := reqctx.NewStateContainer()
-
-	tmpl.AddStateContainer("middleware", container)
+func TestStateHandling(t *testing.T) {
+	tmpl := New(reqctx.New(ContextFactory))
 
 	middleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			state := container.GetState(r)
-			state.Set("msg", "Hello World")
-			container.Middleware(next).ServeHTTP(w, r)
+			state := tmpl.states.Context(r).(ITemplateCtx)
+			state.SetTemplateValue("msg", "Hello World")
+			tmpl.states.Middleware(next).ServeHTTP(w, r)
 		})
 	}
 
