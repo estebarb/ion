@@ -129,7 +129,7 @@ func equalPath(path, pattern []string) (map[string]string, bool) {
 	}
 	for k, v := range path {
 		pat := pattern[k]
-		if len(pat) > 0 && pat[0] == ':' {
+		if len(pat) > 0 && pat[0] == ':' && len(v) > 0 {
 			// We got a variable
 			values[pat[1:]] = v
 		} else if pat != v {

@@ -48,6 +48,7 @@ import (
 	"github.com/estebarb/ion/components/chain"
 	"github.com/estebarb/ion/components/router"
 	"github.com/estebarb/ion/components/templates"
+	"github.com/estebarb/ion/components/reqctx"
 	"io/ioutil"
 	"net/http"
 )
@@ -57,11 +58,12 @@ type Ion struct {
 	Router     *router.Router
 	Middleware []*chain.Chain
 	Template   *templates.Templates
+	State     *reqctx.StateContainer
 }
 
 var App *Ion
 
-func init(){
+func init() {
 	App = New()
 }
 
@@ -121,17 +123,20 @@ func PutFunc(path string, handler http.HandlerFunc) *router.Route {
 	return App.Router.Put(path, App.generateHandlerFunc(handler))
 }
 
-
-
 /*
 Returns a new router, with no middleware.
 */
 func New() *Ion {
-	return &Ion{
+	app := &Ion{
 		Router:     router.New(),
 		Middleware: []*chain.Chain{chain.New()},
 		Template:   templates.New(),
+		State:      reqctx.NewStateContainer(),
 	}
+	app.Template.AddStateContainer("Router",
+		app.Router.GetStateContainer())
+	app.Template.AddStateContainer("App", app.State)
+	return app
 }
 
 func (a *Ion) ServeHTTP(w http.ResponseWriter, r *http.Request) {
