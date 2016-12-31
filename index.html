@@ -37,44 +37,20 @@
 
 <p>Ion leverages component composition to allow functionality reuse, and build complex behaviors based on simple components.</p>
 
-<p>It provides:</p>
-<dl>
-    <dt>Components</dt>
-    <dd>Ion provides several components, that can be linked
-    using an standarized function signature/interface.
-    This components can be used inside or outside Ion.
-    </dd>
-    <dt>Ion</dt>
-    <dd>An opinionated layer that allows to easily use
-    the previous components.</dd>
-</dl>
-
 <h2>A short example</h2>
 
 <pre class="prettyprint">package main
-
 import (
     "fmt"
     "github.com/estebarb/ion"
+    "github.com/estebarb/ion/components/router"
     "net/http"
 )
 
-type App struct {
-    *ion.Ion
-}
-
-func NewApp() *App {
-    app := &App{
-        Ion: ion.New(),
-    }
-    app.GetFunc("/", app.hello)
-    app.GetFunc("/:name", app.hello)
-    return app
-}
-
-func (app *App) hello(w http.ResponseWriter, r *http.Request) {
-    state := app.Router.GetState(r)
-    value, exists := state.Get("name")
+func hello(w http.ResponseWriter, r *http.Request) {
+    context := ion.App.Context(r)
+    params := context.(router.IPathParam)
+    value, exists := params.PathParams()["name"]
     if exists {
         fmt.Fprintf(w, "Hello, %v!", value)
     } else {
@@ -83,13 +59,14 @@ func (app *App) hello(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-    http.ListenAndServe(":5500", NewApp())
+    ion.GetFunc("/", hello)
+    ion.GetFunc("/:name", hello)
+    http.ListenAndServe(":5500", ion.App)
 }
 </pre>
 
-<p><b>WARNING:</b>At this point the framework is highly experimental, so please don't
-use it in production for now... I'm planning to add more features,
-but maybe I will break things. Don't say I didn't told you! :p</p>
+<p><b>WARNING:</b>At this point the framework is highly experimental, so please take that
+in consideration if you want to use it.</p>
 
 <h2>
 <a id="license" class="anchor" href="#license" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>License</h2>
