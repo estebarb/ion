@@ -62,3 +62,17 @@ func TestSequence(t *testing.T) {
 		t.Error("Wrong response. Expecting abcd, received", rec.Body.String())
 	}
 }
+
+func TestJoin(t *testing.T) {
+	aaa := New()
+	aaa.Add(GenerateMiddleware("a"))
+	bbb := New()
+	bbb.Add(GenerateMiddleware("b"))
+	joined := Join(aaa, bbb)
+	handler := joined.ThenFunc(GenerateHandlerFunc("c"))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, nil)
+	if rec.Body.String() != "abcba" {
+		t.Error("Wrong response. Expecting abcba, received", rec.Body.String())
+	}
+}
