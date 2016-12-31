@@ -1,4 +1,4 @@
-// ionrw contains a http.ResponseWriter implementation
+// Package ionrw contains a http.ResponseWriter implementation
 package ionrw
 
 import (
@@ -8,7 +8,7 @@ import (
 
 // ResponseWriter is a custom implementation of http.ResponseWriter
 // that supports registering callbacks, that are called
-// before writting the final response.
+// before writing the final response.
 type ResponseWriter struct {
 	http.ResponseWriter
 	status        int
@@ -38,30 +38,28 @@ func (rw *ResponseWriter) callPreconditions() {
 	}
 }
 
-// Written returns if this ResponseWriter have been already
-// written.
+// Written returns if this ResponseWriter have been already written.
 func (rw *ResponseWriter) Written() bool {
 	return rw.status != 0
 }
 
-// Size returns the amount of bytes written to this ResponseWriter
-// body.
+// Size returns the amount of bytes written to this ResponseWriter body.
 func (rw *ResponseWriter) Size() int {
 	return rw.size
 }
 
 // AddPrecondition adds a http.HandlerFunc that will be called
-// before writting headers to the response.
+// before writing headers to the response.
 func (rw *ResponseWriter) AddPrecondition(fun http.HandlerFunc) {
 	rw.preconditions = append(rw.preconditions, fun)
 }
 
 // WriteHeader writes a header to the ResponseWriter, but before
 // calls all the preconditions registered.
-func (rwi *ResponseWriter) WriteHeader(status int) {
-	rwi.status = status
-	rwi.once.Do(rwi.callPreconditions)
-	rwi.ResponseWriter.WriteHeader(status)
+func (rw *ResponseWriter) WriteHeader(status int) {
+	rw.status = status
+	rw.once.Do(rw.callPreconditions)
+	rw.ResponseWriter.WriteHeader(status)
 }
 
 // Write writes the bytes passed to this ResponseWriter, but before
@@ -85,6 +83,8 @@ func Interceptor(w http.ResponseWriter, r *http.Request) *ResponseWriter {
 	return New(w, r)
 }
 
+// InterceptorMiddleware is a middleware that changes the request ResponseWriter
+// with this custom implementation
 func InterceptorMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {

@@ -1,6 +1,6 @@
 // +build appengine
 
-// Middleware specific for GAE
+// Package iongae provides middleware specific for Google App Engine
 package iongae
 
 import (
@@ -8,7 +8,8 @@ import (
 	"net/http"
 )
 
-func GAEPanicMiddleware(next http.Handler) http.Handler {
+// DontPanic recovers from panics in other handlers
+func DontPanic(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {

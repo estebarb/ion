@@ -1,4 +1,4 @@
-// futures allow adding incomplete computations
+// Package futures allow adding incomplete computations
 // in contexts and templates.
 // This allows to start the rendering of the
 // template before all the other operations
@@ -10,7 +10,7 @@ import "sync"
 // Future represents an maybe incomplete operation, that is
 // being processed
 type Future struct {
-	sync.Once
+	once  sync.Once
 	input chan interface{}
 	value interface{}
 }
@@ -26,9 +26,9 @@ func NewFuture(input chan interface{}) *Future {
 
 // NewFutureFunc creates a Future from a function that
 // returns an interface{}
-func NewFutureFunc(f func()interface{}) *Future{
+func NewFutureFunc(f func() interface{}) *Future {
 	c := make(chan interface{})
-	go func(){
+	go func() {
 		c <- f()
 	}()
 	return NewFuture(c)
@@ -37,13 +37,13 @@ func NewFutureFunc(f func()interface{}) *Future{
 // Read blocks until the computation finish,
 // and then returns the value.
 func (f *Future) Read() interface{} {
-	f.Do(func(){
-		f.value = <- f.input
+	f.once.Do(func() {
+		f.value = <-f.input
 	})
 	return f.value
 }
 
-// Read reads the Future value. Is intented to
+// Read reads the Future value. Is intended to
 // be used on templates.
 func Read(f *Future) interface{} {
 	return f.Read()

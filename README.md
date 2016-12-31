@@ -9,44 +9,34 @@ build complex behaviors based on simple components.
 
 A short example:
 
-	package main
+    package main
     
     import (
-    	"fmt"
-    	"github.com/estebarb/ion"
-    	"net/http"
+        "fmt"
+        "github.com/estebarb/ion"
+        "github.com/estebarb/ion/components/router"
+        "net/http"
     )
     
-    type App struct {
-    	*ion.Ion
-    }
-    
-    func NewApp() *App {
-    	app := &App{
-    		Ion: ion.New(),
-    	}
-    	app.GetFunc("/", app.hello)
-    	app.GetFunc("/:name", app.hello)
-    	return app
-    }
-    
-    func (app *App) hello(w http.ResponseWriter, r *http.Request) {
-    	state := app.Router.GetState(r)
-    	value, exists := state.Get("name")
-    	if exists {
-    		fmt.Fprintf(w, "Hello, %v!", value)
-    	} else {
-    		fmt.Fprint(w, "Hello world!")
-    	}
+    func hello(w http.ResponseWriter, r *http.Request) {
+        context := ion.App.Context(r)
+        params := context.(router.IPathParam)
+        value, exists := params.PathParams()["name"]
+        if exists {
+            fmt.Fprintf(w, "Hello, %v!", value)
+        } else {
+            fmt.Fprint(w, "Hello world!")
+        }
     }
     
     func main() {
-    	http.ListenAndServe(":5500", NewApp())
+        ion.GetFunc("/", hello)
+        ion.GetFunc("/:name", hello)
+        http.ListenAndServe(":5500", ion.App)
     }
-	
-At this point the framework is highly experimental, so please don't
-use it in production for now... I'm planning to add more features,
-but maybe I will break things. Don't say I didn't tell you! :p
+    
+At this point the framework is highly experimental, so please take that
+in consideration if you want to use it.
 
 ## License
 

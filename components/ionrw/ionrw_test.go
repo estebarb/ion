@@ -8,7 +8,7 @@ import (
 )
 
 var TESTKEY = "TEST"
-var TESTVAL = "SUCESS"
+var TESTVAL = "SUCCESS"
 var TESTBODY = "Hello World!"
 
 func precondition(w http.ResponseWriter, r *http.Request) {

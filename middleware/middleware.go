@@ -1,4 +1,4 @@
-// Middleware contains general purpose middleware.
+// Package middleware contains general purpose middleware.
 package middleware
 
 import (
@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-// Provides a logging middleware
-func LoggingMiddleware(next http.Handler) http.Handler {
+// Logging provides a logging middleware
+func Logging(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		t1 := time.Now()
 		next.ServeHTTP(w, r)
@@ -19,8 +19,8 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(fn)
 }
 
-// Provides a recovery from panics in other handlers
-func PanicMiddleware(next http.Handler) http.Handler {
+// DontPanic recovers from panics in other handlers
+func DontPanic(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
@@ -37,7 +37,7 @@ func PanicMiddleware(next http.Handler) http.Handler {
 
 // FormParser parses the forms in all the requests,
 // so that you don't have to do it in the handlers/controllers.
-func FormParserMiddleware(next http.Handler) http.Handler {
+func FormParser(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
 		if err != nil {

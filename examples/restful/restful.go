@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/estebarb/ion"
+	"github.com/estebarb/ion/components/router"
 	"net/http"
 )
 
@@ -11,13 +12,12 @@ type restHandler struct {
 }
 
 func (c *restHandler) URLArgs(r *http.Request, key string) string {
-	state := c.Router.GetState(r)
-	value, ok := state.Get(key)
-	if ok {
-		return value.(string)
-	} else {
+	state := c.Context(r).(router.IPathParam)
+	value, ok := state.PathParams()[key]
+	if !ok {
 		return ""
 	}
+	return value
 }
 
 func (c restHandler) LIST(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +30,7 @@ func (c restHandler) POST(w http.ResponseWriter, r *http.Request) {
 
 func (c restHandler) PUT(w http.ResponseWriter, r *http.Request) {
 	val := c.URLArgs(r, "id")
-	fmt.Fprint(w, "upsert thing as %v", val)
+	fmt.Fprintf(w, "upsert thing as %v", val)
 }
 
 func (c restHandler) GET(w http.ResponseWriter, r *http.Request) {
@@ -44,9 +44,8 @@ func (c restHandler) DELETE(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	app := ion.New()
 	var rest restHandler
-	app.GetFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	ion.GetFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, `Please try the following endpoints:
 	- GET       /test/      Lists the items
 	- POST      /test/      Post a new item
@@ -54,6 +53,6 @@ func main() {
 	- DELETE    /test/{id}   Deletes a item
 	- PUT       /test/{id}   Updates a item`)
 	})
-	app.RegisterREST("/test/", rest)
-	http.ListenAndServe(":8080", app)
+	ion.App.RegisterREST("/test/", rest)
+	http.ListenAndServe(":8080", ion.App)
 }

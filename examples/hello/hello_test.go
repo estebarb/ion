@@ -8,7 +8,7 @@ import (
 )
 
 func compare(t *testing.T, path, expected string) {
-	ts := httptest.NewServer(NewApp())
+	ts := httptest.NewServer(newApp())
 	defer ts.Close()
 	response, err := http.Get(ts.URL + path)
 	if err != nil {

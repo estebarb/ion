@@ -1,5 +1,5 @@
 // Package router contains a flexible router,
-// with advanced middleware handling
+// with integrated context management per request
 package router
 
 import (
@@ -9,18 +9,57 @@ import (
 	"strings"
 )
 
+// Router register routes to be matched and
+// dispatches its corresponding handler.
+// As the router accepts path arguments then it fills
+// the context with the them.
 type Router struct {
+	*reqctx.State
 	routeByName   map[string]*route
 	routeByMethod map[string]([]*route)
-	states        *reqctx.StateContainer
 }
 
-func New() *Router {
+// IPathParam must be implemented by the context used by the application,
+// in order to allow the Router to store the path arguments there
+type IPathParam interface {
+	PathParams() map[string]string
+	SetPathParams(values map[string]string)
+}
+
+// Path contains the arguments extracted by the router from the request path
+type Path struct {
+	Params map[string]string
+}
+
+// PathParams returns all the arguments matched in the path by the router
+func (c *Path) PathParams() map[string]string {
+	return c.Params
+}
+
+// SetPathParams replaces the existing path params values with new ones
+func (c *Path) SetPathParams(values map[string]string) {
+	c.Params = values
+}
+
+// New creates a new router, with the given ContextFactory
+func New(ContextFactory func() interface{}) *Router {
 	return &Router{
 		routeByName:   make(map[string]*route),
 		routeByMethod: make(map[string]([]*route)),
-		states:        reqctx.NewStateContainer(),
+		State:         reqctx.New(ContextFactory),
 	}
+}
+
+// NewDefault creates a new router, using router.ContextFactory for
+// the context creation
+func NewDefault() *Router {
+	return New(ContextFactory)
+}
+
+// ContextFactory returns a new instance of Path (the router only needs
+// to store the matched arguments in the path)
+func ContextFactory() interface{} {
+	return &Path{}
 }
 
 type route struct {
@@ -39,19 +78,11 @@ func splitWithoutTrailingSlash(str string) []string {
 	return parsedPath
 }
 
-func (r *Router) GetState(req *http.Request) *reqctx.State {
-	return r.states.GetState(req)
-}
-
-func (r *Router) GetStateContainer() *reqctx.StateContainer {
-	return r.states
-}
-
-// BuildRoute returns a route corresponding to de requested
+// RouteFor returns a route corresponding to de requested
 // route name.
 // The arguments have the format:
-// BuildRoute(name, [key, value]*)
-func (r *Router) BuildRoute(name string, args ...string) template.URL {
+// RouteFor(name, [key, value]*)
+func (r *Router) RouteFor(name string, args ...string) template.URL {
 	route, ok := r.routeByName[name]
 	if !ok || len(args)%2 != 0 {
 		return ""
@@ -75,6 +106,8 @@ func (r *Router) BuildRoute(name string, args ...string) template.URL {
 	return template.URL(strings.Join(dst, "/"))
 }
 
+// Handler register a handler to be dispatched when a request
+// matches with the method and the path.
 func (r *Router) Handler(method string,
 	path string,
 	handler http.Handler) *Route {
@@ -97,12 +130,15 @@ func (r *Router) Handler(method string,
 	}
 }
 
+// HandleFunc register a handler to be dispatched when a request
+// matches with the method and the path.
 func (r *Router) HandleFunc(method string,
 	path string,
 	handler http.HandlerFunc) *Route {
 	return r.Handler(method, path, http.HandlerFunc(handler))
 }
 
+// ServeHTTP dispatches the handler that matches with the request
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	method := req.Method
 	routes := r.routeByMethod[method]
@@ -111,11 +147,11 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	for _, route := range routes {
 		values, eq := equalPath(path, route.parsedPath)
 		if eq {
-			state := r.states.GetState(req)
-			for key, value := range values {
-				state.Set(key, value)
-			}
-			r.GetStateContainer().Middleware(route.handler).ServeHTTP(w, req)
+			r.Middleware(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				context := r.Context(req)
+				context.(IPathParam).SetPathParams(values)
+				route.handler.ServeHTTP(w, req)
+			})).ServeHTTP(w, req)
 			return
 		}
 	}
@@ -140,11 +176,14 @@ func equalPath(path, pattern []string) (map[string]string, bool) {
 	return values, true
 }
 
+// Route represents a Router matching rule, to be further refined.
 type Route struct {
 	router *Router
 	route  *route
 }
 
+// Name assigns an identifier to the Route. This allows to use RouteFor
+// to construct a path that could match this rule.
 func (r *Route) Name(name string) *Route {
 	if name != "" {
 		r.router.routeByName[name] = r.route
@@ -152,50 +191,62 @@ func (r *Route) Name(name string) *Route {
 	return r
 }
 
+// Get register the handler in the router, after wrapping it with the middleware
 func (r *Router) Get(path string, handler http.Handler) *Route {
 	return r.Handler("GET", path, handler)
 }
 
+// Post register the handler in the router, after wrapping it with the middleware
 func (r *Router) Post(path string, handler http.Handler) *Route {
 	return r.Handler("POST", path, handler)
 }
 
+// Put register the handler in the router, after wrapping it with the middleware
 func (r *Router) Put(path string, handler http.Handler) *Route {
 	return r.Handler("PUT", path, handler)
 }
 
+// Delete register the handler in the router, after wrapping it with the middleware
 func (r *Router) Delete(path string, handler http.Handler) *Route {
 	return r.Handler("DELETE", path, handler)
 }
 
+// Patch register the handler in the router, after wrapping it with the middleware
 func (r *Router) Patch(path string, handler http.Handler) *Route {
 	return r.Handler("PATCH", path, handler)
 }
 
+// Options register the handler in the router, after wrapping it with the middleware
 func (r *Router) Options(path string, handler http.Handler) *Route {
 	return r.Handler("OPTIONS", path, handler)
 }
 
+// GetFunc register the handler in the router, after wrapping it with the middleware
 func (r *Router) GetFunc(path string, handler http.HandlerFunc) *Route {
 	return r.HandleFunc("GET", path, handler)
 }
 
+// PostFunc register the handler in the router, after wrapping it with the middleware
 func (r *Router) PostFunc(path string, handler http.HandlerFunc) *Route {
 	return r.HandleFunc("POST", path, handler)
 }
 
+// PutFunc register the handler in the router, after wrapping it with the middleware
 func (r *Router) PutFunc(path string, handler http.HandlerFunc) *Route {
 	return r.HandleFunc("PUT", path, handler)
 }
 
+// DeleteFunc register the handler in the router, after wrapping it with the middleware
 func (r *Router) DeleteFunc(path string, handler http.HandlerFunc) *Route {
 	return r.HandleFunc("DELETE", path, handler)
 }
 
+// PatchFunc register the handler in the router, after wrapping it with the middleware
 func (r *Router) PatchFunc(path string, handler http.HandlerFunc) *Route {
 	return r.HandleFunc("PATCH", path, handler)
 }
 
+// OptionsFunc register the handler in the router, after wrapping it with the middleware
 func (r *Router) OptionsFunc(path string, handler http.HandlerFunc) *Route {
 	return r.HandleFunc("OPTIONS", path, handler)
 }
