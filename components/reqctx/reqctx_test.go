@@ -7,7 +7,7 @@ import (
 )
 
 func TestMiddleware(t *testing.T) {
-	sc := New(BasicContextFactory)
+	sc := NewDefault()
 	handler := sc.Middleware
 
 	dummy := func(w http.ResponseWriter, r *http.Request) {
