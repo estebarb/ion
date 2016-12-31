@@ -5,7 +5,6 @@ import (
 	"net/http"
 )
 
-
 func BasicContextFactory() interface{} {
 	return make(map[string]interface{})
 }

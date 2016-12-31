@@ -1,4 +1,4 @@
-// +build go1.6
+// +build go1.7
 
 // reqctx provides an uniform way to access request context.
 package reqctx
@@ -11,7 +11,6 @@ import (
 type State struct {
 	ctxFactory func() interface{}
 }
-
 
 func New(ctxFactory func() interface{}) *State {
 	return &State{
