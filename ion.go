@@ -1,5 +1,5 @@
 /*
-Package ion is a small web framework for people in a hurry.
+Package ion is a small web framework written in Go.
 
 Ion provides a request router, middleware management, automatic
 context support and some handful helpers.
@@ -31,7 +31,6 @@ A short example:
 		ion.GetFunc("/:name", hello)
 		http.ListenAndServe(":5500", ion.App)
 	}
-
 
 At this point the framework is highly experimental, so please take that
 in consideration if you want to use it.

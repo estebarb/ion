@@ -10,7 +10,7 @@ import "sync"
 // Future represents an maybe incomplete operation, that is
 // being processed
 type Future struct {
-	sync.Once
+	once  sync.Once
 	input chan interface{}
 	value interface{}
 }
@@ -37,7 +37,7 @@ func NewFutureFunc(f func() interface{}) *Future {
 // Read blocks until the computation finish,
 // and then returns the value.
 func (f *Future) Read() interface{} {
-	f.Do(func() {
+	f.once.Do(func() {
 		f.value = <-f.input
 	})
 	return f.value
