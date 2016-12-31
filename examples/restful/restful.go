@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/estebarb/ion"
-	"net/http"
 	"github.com/estebarb/ion/components/router"
+	"net/http"
 )
 
 type restHandler struct {
