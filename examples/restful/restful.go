@@ -31,7 +31,7 @@ func (c restHandler) POST(w http.ResponseWriter, r *http.Request) {
 
 func (c restHandler) PUT(w http.ResponseWriter, r *http.Request) {
 	val := c.URLArgs(r, "id")
-	fmt.Fprint(w, "upsert thing as %v", val)
+	fmt.Fprintf(w, "upsert thing as %v", val)
 }
 
 func (c restHandler) GET(w http.ResponseWriter, r *http.Request) {

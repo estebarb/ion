@@ -8,7 +8,7 @@ import (
 
 // ResponseWriter is a custom implementation of http.ResponseWriter
 // that supports registering callbacks, that are called
-// before writting the final response.
+// before writing the final response.
 type ResponseWriter struct {
 	http.ResponseWriter
 	status        int
@@ -51,7 +51,7 @@ func (rw *ResponseWriter) Size() int {
 }
 
 // AddPrecondition adds a http.HandlerFunc that will be called
-// before writting headers to the response.
+// before writing headers to the response.
 func (rw *ResponseWriter) AddPrecondition(fun http.HandlerFunc) {
 	rw.preconditions = append(rw.preconditions, fun)
 }

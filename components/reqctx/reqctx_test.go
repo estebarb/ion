@@ -41,8 +41,7 @@ func TestMiddleware(t *testing.T) {
 				field, exists := state[key]
 				if !exists {
 					t.Errorf("Expecting %s=true, but %s doesn't exists",
-						key, key,
-						field)
+						key, key)
 				}
 				value, ok := field.(string)
 				if !ok || value != "true" {
