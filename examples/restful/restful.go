@@ -14,11 +14,10 @@ type restHandler struct {
 func (c *restHandler) URLArgs(r *http.Request, key string) string {
 	state := c.Context(r).(router.IPathParam)
 	value, ok := state.PathParams()[key]
-	if ok {
-		return value
-	} else {
+	if !ok {
 		return ""
 	}
+	return value
 }
 
 func (c restHandler) LIST(w http.ResponseWriter, r *http.Request) {

@@ -21,7 +21,7 @@ A short example:
     	*ion.Ion
     }
     
-    func NewApp() *App {
+    func newApp() *App {
     	app := &App{
     		Ion: ion.New(),
     	}
@@ -41,7 +41,7 @@ A short example:
     }
     
     func main() {
-    	http.ListenAndServe(":5500", NewApp())
+    	http.ListenAndServe(":5500", newApp())
     }
 	
 At this point the framework is highly experimental, so please don't

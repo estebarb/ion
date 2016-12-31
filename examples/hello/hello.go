@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func NewApp() *ion.Ion {
+func newApp() *ion.Ion {
 	ion.GetFunc("/", hello)
 	ion.GetFunc("/:name", hello)
 	return ion.App
@@ -25,5 +25,5 @@ func hello(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.ListenAndServe(":5500", NewApp())
+	http.ListenAndServe(":5500", newApp())
 }

@@ -79,22 +79,22 @@ func TestBuildRoute(t *testing.T) {
 	r := NewDefault()
 	r.Get("/hello/:name/:number/world",
 		http.NotFoundHandler()).Name("hello")
-	url := r.BuildRoute("hello", "name", "test", "number", "001")
+	url := r.RouteFor("hello", "name", "test", "number", "001")
 	if string(url) != "/hello/test/001/world" {
 		t.Error("Expecting /hello/test/001/world, received:", string(url))
 	}
 
-	url = r.BuildRoute("void", "name", "test", "number", "001")
+	url = r.RouteFor("void", "name", "test", "number", "001")
 	if string(url) != "" {
 		t.Error("Expecting empty string, got:", url)
 	}
 
-	url = r.BuildRoute("hello", "name", "test", "number")
+	url = r.RouteFor("hello", "name", "test", "number")
 	if string(url) != "" {
 		t.Error("Expecting empty string, got:", url)
 	}
 
-	url = r.BuildRoute("hello", "name", "test")
+	url = r.RouteFor("hello", "name", "test")
 	if string(url) != "" {
 		t.Error("Expecting empty string, got:", url)
 	}

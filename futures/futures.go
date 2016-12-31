@@ -1,4 +1,4 @@
-// futures allow adding incomplete computations
+// Package futures allow adding incomplete computations
 // in contexts and templates.
 // This allows to start the rendering of the
 // template before all the other operations
@@ -43,7 +43,7 @@ func (f *Future) Read() interface{} {
 	return f.value
 }
 
-// Read reads the Future value. Is intented to
+// Read reads the Future value. Is intended to
 // be used on templates.
 func Read(f *Future) interface{} {
 	return f.Read()
