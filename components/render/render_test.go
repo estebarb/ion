@@ -50,7 +50,6 @@ func TestNew(t *testing.T) {
 		t.Errorf("Expecting error, got nil")
 	}
 
-
 	expectedA := "<wrapper><content>hello</content></wrapper>"
 	expectedB := "<wrapper><contentB>HELLO</contentB></wrapper>"
 	expectedC := "<wrapper2><content>hello</content></wrapper2>"
