@@ -1,267 +1,134 @@
-/*
-Package ion is a small web framework written in Go.
-
-Ion provides a request router, middleware management, automatic
-context support and some handful helpers.
-
-A short example:
-
-	package main
-
-	import (
-		"fmt"
-		"github.com/estebarb/ion"
-		"github.com/estebarb/ion/components/router"
-		"net/http"
-	)
-
-	func hello(w http.ResponseWriter, r *http.Request) {
-		context := ion.App.Context(r)
-		params := context.(router.IPathParam)
-		value, exists := params.PathParams()["name"]
-		if exists {
-			fmt.Fprintf(w, "Hello, %v!", value)
-		} else {
-			fmt.Fprint(w, "Hello world!")
-		}
-	}
-
-	func main() {
-		ion.GetFunc("/", hello)
-		ion.GetFunc("/:name", hello)
-		http.ListenAndServe(":5500", ion.App)
-	}
-
-At this point the framework is highly experimental, so please take that
-in consideration if you want to use it.
-*/
+// Package ion implements a small web framework that allows to
+// easily connect reusable components.
+//
+// This framework is based on https://blog.gopheracademy.com/advent-2016/go-syntax-for-dsls/
+// idea of using a DSL. This approach naturally removes the need to implement
+// a router, allowing the framework to just reuse Go standard mux.
+//
+// Ion have the following features:
+//
+// - Can use easily any http.Handler or http.HandlerFunc
+// - Easily describe paths (with arguments) and method handlers
+// - Compatible with Middlewares
+// - Use context for passing path arguments
+//
 package ion
 
 import (
-	"encoding/json"
-	"github.com/estebarb/ion/components/chain"
-	"github.com/estebarb/ion/components/router"
-	"io/ioutil"
+	"context"
+	"log"
 	"net/http"
+	"strings"
 )
 
-// Ion represents an Ion web application
-type Ion struct {
-	*router.Router
-	Middleware []*chain.Chain
-}
+// Middleware is a function that wrap an http.Handler and returns a value
+// that implements the http.Handler interface
+type Middleware func(next http.Handler) http.Handler
 
-// App is the default Ion application created when importing the package.
-// Instead of creating and passing a ion.Ion instance in the application
-// this global variable could be used.
-var App *Ion
+// Chain describes a secuence of Middleware
+type Chain []Middleware
 
-func init() {
-	App = New(router.ContextFactory)
-}
-
-// ServeHTTP calls ion.App.ServeHTTP(w, r), the request dispatcher
-// of the default Ion application.
-func ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	App.ServeHTTP(w, r)
-}
-
-// MethodHandle registers a request handler for the given path, and adds the current
-// middleware in Ion settings.
-func MethodHandle(method, path string, handle http.Handler) *router.Route {
-	return App.Handler(method, path, App.generateHandler(handle))
-}
-
-// MethodHandleFunc registers a request handler for the given path, and adds the current
-// middleware in Ion settings.
-func MethodHandleFunc(method, path string, handle http.HandlerFunc) *router.Route {
-	return App.Handler(method, path, App.generateHandlerFunc(handle))
-}
-
-// Delete register a Delete action in the default application
-func Delete(path string, handler http.Handler) *router.Route {
-	return App.Delete(path, App.generateHandler(handler))
-}
-
-// Get register a Get action in the default application
-func Get(path string, handler http.Handler) *router.Route {
-	return App.Get(path, App.generateHandler(handler))
-}
-
-// Post register a Post action in the default application
-func Post(path string, handler http.Handler) *router.Route {
-	return App.Post(path, App.generateHandler(handler))
-}
-
-// Patch register a Patch action in the default application
-func Patch(path string, handler http.Handler) *router.Route {
-	return App.Patch(path, App.generateHandler(handler))
-}
-
-// Put register a Put action in the default application
-func Put(path string, handler http.Handler) *router.Route {
-	return App.Put(path, App.generateHandler(handler))
-}
-
-// DeleteFunc register a DeleteFunc action in the default application
-func DeleteFunc(path string, handler http.HandlerFunc) *router.Route {
-	return App.Delete(path, App.generateHandlerFunc(handler))
-}
-
-// GetFunc register a GetFunc action in the default application
-func GetFunc(path string, handler http.HandlerFunc) *router.Route {
-	return App.Get(path, App.generateHandlerFunc(handler))
-}
-
-// PostFunc register a PostFunc action in the default application
-func PostFunc(path string, handler http.HandlerFunc) *router.Route {
-	return App.Post(path, App.generateHandlerFunc(handler))
-}
-
-// PatchFunc register a PatchFunc action in the default application
-func PatchFunc(path string, handler http.HandlerFunc) *router.Route {
-	return App.Patch(path, App.generateHandlerFunc(handler))
-}
-
-// PutFunc register a PutFunc action in the default application
-func PutFunc(path string, handler http.HandlerFunc) *router.Route {
-	return App.Put(path, App.generateHandlerFunc(handler))
-}
-
-// New creates an Ion application, with router and middleware support.
-// It receives a contextFactory that creates a context per request.
-func New(contextFactory func() interface{}) *Ion {
-	app := &Ion{
-		Router:     router.New(contextFactory),
-		Middleware: []*chain.Chain{chain.New()},
+// Then composes all the middlewares wrapping the given
+// http.Handler, and returns a new http.Handler
+func (c Chain) Then(h http.Handler) http.Handler {
+	f := h
+	for i := len(c) - 1; i >= 0; i-- {
+		f = c[i](f)
 	}
-	return app
+	return f
 }
 
-// generateHandler wraps the given Handler with the middleware layers
-func (a *Ion) generateHandler(handle http.Handler) http.Handler {
-	return chain.Join(a.Middleware...).Then(handle)
+// Endpoint describes a http request handler, that may
+// have optional Middleware
+type Endpoint struct {
+	Middleware  []Middleware
+	Handler     Builder
+	HttpHandler http.Handler
 }
 
-// generateHandler wraps the given HandlerFunc with the middleware layers
-func (a *Ion) generateHandlerFunc(handle http.HandlerFunc) http.Handler {
-	return chain.Join(a.Middleware...).ThenFunc(handle)
-}
-
-// MethodHandle registers a request handler for the given path, and adds the current
-// middleware in Ion settings.
-func (a *Ion) MethodHandle(method, path string, handle http.Handler) *router.Route {
-	return a.Router.Handler(method, path, a.generateHandler(handle))
-}
-
-// MethodHandleFunc registers a request handler for the given path, and adds the current
-// middleware in Ion settings.
-func (a *Ion) MethodHandleFunc(method, path string, handle http.HandlerFunc) *router.Route {
-	return a.Router.Handler(method, path, a.generateHandlerFunc(handle))
-}
-
-// Delete register the handler in the router, after wrapping it with the middleware
-func (a *Ion) Delete(path string, handler http.Handler) *router.Route {
-	return a.Router.Delete(path, a.generateHandler(handler))
-}
-
-// Get register the handler in the router, after wrapping it with the middleware
-func (a *Ion) Get(path string, handler http.Handler) *router.Route {
-	return a.Router.Get(path, a.generateHandler(handler))
-}
-
-// Post register the handler in the router, after wrapping it with the middleware
-func (a *Ion) Post(path string, handler http.Handler) *router.Route {
-	return a.Router.Post(path, a.generateHandler(handler))
-}
-
-// Patch register the handler in the router, after wrapping it with the middleware
-func (a *Ion) Patch(path string, handler http.Handler) *router.Route {
-	return a.Router.Patch(path, a.generateHandler(handler))
-}
-
-// Put register the handler in the router, after wrapping it with the middleware
-func (a *Ion) Put(path string, handler http.Handler) *router.Route {
-	return a.Router.Put(path, a.generateHandler(handler))
-}
-
-// DeleteFunc register the handler in the router, after wrapping it with the middleware
-func (a *Ion) DeleteFunc(path string, handler http.HandlerFunc) *router.Route {
-	return a.Router.Delete(path, a.generateHandlerFunc(handler))
-}
-
-// GetFunc register the handler in the router, after wrapping it with the middleware
-func (a *Ion) GetFunc(path string, handler http.HandlerFunc) *router.Route {
-	return a.Router.Get(path, a.generateHandlerFunc(handler))
-}
-
-// PostFunc register the handler in the router, after wrapping it with the middleware
-func (a *Ion) PostFunc(path string, handler http.HandlerFunc) *router.Route {
-	return a.Router.Post(path, a.generateHandlerFunc(handler))
-}
-
-// PatchFunc register the handler in the router, after wrapping it with the middleware
-func (a *Ion) PatchFunc(path string, handler http.HandlerFunc) *router.Route {
-	return a.Router.Patch(path, a.generateHandlerFunc(handler))
-}
-
-// PutFunc register the handler in the router, after wrapping it with the middleware
-func (a *Ion) PutFunc(path string, handler http.HandlerFunc) *router.Route {
-	return a.Router.Put(path, a.generateHandlerFunc(handler))
-}
-
-// RESTendpoint works with RegisterREST to provide a shortcut
-// to register an RESTful endpoint.
-type RESTendpoint interface {
-	LIST(w http.ResponseWriter, r *http.Request)
-	POST(w http.ResponseWriter, r *http.Request)
-	PUT(w http.ResponseWriter, r *http.Request)
-	GET(w http.ResponseWriter, r *http.Request)
-	DELETE(w http.ResponseWriter, r *http.Request)
-}
-
-// RegisterREST register a RESTendpoint in the router with some default paths
-// It will register the following routes:
-//
-//    - GET  path		(list function)
-//    - POST path		(post function)
-//    - GET  path/:id	        (get function)
-//    - PUT  path/:id	        (put function)
-//    - DELETE  path/:id	(delete function)
-//
-// The path MUST include the trailing slash.
-func (a *Ion) RegisterREST(path string, handler RESTendpoint) {
-	a.GetFunc(path+":id", handler.GET)
-	a.PutFunc(path+":id", handler.PUT)
-	a.DeleteFunc(path+":id", handler.DELETE)
-	a.GetFunc(path, handler.LIST)
-	a.PostFunc(path, handler.POST)
-}
-
-// DoNothing is a handler that do nothing.
-// It can be used as a placeholder, or when we want to run
-// the middleware for the collateral effects, but we don't want
-// to do something specific.
-// Also can be used with IonMVC.
-func DoNothing(w http.ResponseWriter, r *http.Request) {
-}
-
-// MarshalJSON writes a JSON value to the ResponseWriter
-func MarshalJSON(w http.ResponseWriter, value interface{}) error {
-	out, err := json.Marshal(value)
-	if err != nil {
-		return err
+// Build generates an http.Handler from an Endpoint
+func (e Endpoint) Build() http.Handler {
+	if (e.HttpHandler != nil) == (e.Handler != nil) {
+		panic("Endpoint support only Handler or HttpHandler, not both")
 	}
-	w.Write(out)
-	return nil
+
+	if e.HttpHandler != nil {
+		return Chain(e.Middleware).Then(e.HttpHandler)
+	}
+	return Chain(e.Middleware).Then(e.Handler.Build())
 }
 
-// UnmarshalJSON parses the request body as a JSON value
-func UnmarshalJSON(r *http.Request, value interface{}) error {
-	body, err := ioutil.ReadAll(r.Body)
-	r.Body.Close()
-	if err != nil {
-		return err
+// Builder interface is implemented by objects that can be build
+// into an http.Handler
+type Builder interface {
+	Build() http.Handler
+}
+
+// Routes describe a request router that handles request according
+// to its path
+type Routes map[string]Endpoint
+
+// Build returns an http.Handler that can handle requests by path
+func (r Routes) Build() http.Handler {
+	mux := http.NewServeMux()
+	for prefix, endpoint := range r {
+		if strings.HasPrefix(prefix, "/:") {
+			parts := strings.Split(strings.TrimPrefix(prefix, "/:"), "/")
+			name := parts[0]
+			mux.Handle("/", captureArgument(name)(endpoint.Build()))
+		} else {
+			mux.Handle(prefix, http.StripPrefix(prefix, endpoint.Build()))
+		}
 	}
-	return json.Unmarshal(body, value)
+	return mux
+}
+
+// PathEnd is a middleware used to "cut" the requests path at the current level.
+// The request is handled if the path is "/" or "".
+func PathEnd(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println(r.URL.Path)
+		if r.URL.Path != "/" && r.URL.Path != "" {
+			http.NotFound(w, r)
+		} else {
+			handler.ServeHTTP(w, r)
+		}
+	})
+}
+
+func captureArgument(name string) Middleware {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/"), "/")
+			var value string
+			if len(parts) > 0 {
+				value = parts[0]
+			}
+			ctx := context.WithValue(r.Context(), name, value)
+			log.Println(name, value)
+			r2 := r.WithContext(ctx)
+
+			http.StripPrefix("/"+value, next).ServeHTTP(w, r2)
+		})
+	}
+}
+
+// Methods implement an http.Handler that handles requests according to
+// the request method.
+type Methods map[string]Endpoint
+
+// Build generates an http.Handler
+func (m Methods) Build() http.Handler {
+	handlers := make(map[string]http.Handler)
+	for k, v := range m {
+		handlers[k] = v.Build()
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handler := handlers[r.Method]
+		if handler != nil {
+			handler.ServeHTTP(w, r)
+		} else {
+			http.NotFound(w, r)
+		}
+	})
 }

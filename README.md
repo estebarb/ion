@@ -12,27 +12,33 @@ A short example:
     package main
     
     import (
-        "fmt"
-        "github.com/estebarb/ion"
-        "github.com/estebarb/ion/components/router"
-        "net/http"
+    	"fmt"
+    	"github.com/estebarb/ion"
+    	"net/http"
     )
     
+    func newApp() http.Handler {
+    	routes := ion.Routes{
+    		"/:name": {
+    			Middleware:  []ion.Middleware{ion.PathEnd},
+    			HttpHandler: http.HandlerFunc(hello),
+    		},
+    	}
+    	return routes.Build()
+    }
+    
     func hello(w http.ResponseWriter, r *http.Request) {
-        context := ion.App.Context(r)
-        params := context.(router.IPathParam)
-        value, exists := params.PathParams()["name"]
-        if exists {
-            fmt.Fprintf(w, "Hello, %v!", value)
-        } else {
-            fmt.Fprint(w, "Hello world!")
-        }
+    	name := r.Context().Value("name")
+    	if name != "" {
+    		fmt.Fprintf(w, "Hello, %v!", name)
+    	} else {
+    		fmt.Fprint(w, "Hello world!")
+    	}
     }
     
     func main() {
-        ion.GetFunc("/", hello)
-        ion.GetFunc("/:name", hello)
-        http.ListenAndServe(":5500", ion.App)
+    	app := newApp()
+    	http.ListenAndServe(":5500", app)
     }
     
 At this point the framework is highly experimental, so please take that
