@@ -71,14 +71,36 @@ type Routes map[string]Endpoint
 // Build returns an http.Handler that can handle requests by path
 func (r Routes) Build() http.Handler {
 	mux := http.NewServeMux()
+
+	rootHandled := false
 	for prefix, endpoint := range r {
 		if strings.HasPrefix(prefix, "/:") {
 			parts := strings.Split(strings.TrimPrefix(prefix, "/:"), "/")
 			name := parts[0]
-			mux.Handle("/", captureArgument(name)(endpoint.Build()))
+			argHandler := captureArgument(name)(endpoint.Build())
+			if _, ok := r["/"]; ok {
+				rootHandler := r["/"].Build()
+				mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+					if req.URL.Path == "/" {
+						rootHandler.ServeHTTP(w, req)
+					} else {
+						argHandler.ServeHTTP(w, req)
+					}
+				}))
+			} else {
+				mux.Handle("/", argHandler)
+			}
+
+			rootHandled = true
+		} else if strings.HasPrefix(prefix, "/") {
+			continue
 		} else {
 			mux.Handle(prefix, http.StripPrefix(prefix, endpoint.Build()))
 		}
+	}
+
+	if !rootHandled {
+		mux.Handle("/", r["/"].Build())
 	}
 	return mux
 }
